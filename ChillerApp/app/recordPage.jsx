@@ -1,5 +1,5 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, Button, Alert,Dimensions } from 'react-native';
-import React, { useState, useEffect } from 'react';
+import {Animated, View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, Button, Alert, Dimensions } from 'react-native';
+import React, { useState, useEffect, useRef,useMemo } from 'react';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Icon from 'react-native-vector-icons/Feather';
 import { fetchChillerRecords, insertChillerRecord, insertSampleData } from './database/DBService.js';
@@ -7,6 +7,10 @@ import { calcEvap, calcComp, calcComp2s } from './js/tableA-13Calculation.js';
 import { CalcCond, CalcEV } from './js/tableA-12Calculation.js';
 import { conclusionCalculationTable } from './js/conclusionCalculationTable.js';
 import ConclusionTable from './js/conclusionTable.js';
+import { LinearGradient } from 'expo-linear-gradient';
+import { FontAwesome, FontAwesome5 } from '@expo/vector-icons';
+import { router } from 'expo-router';
+
 
 // Example of x and y values for each state
 // const xValuesState1 = [0.1, 0.2, 0.3, 0.4];  // Replace with actual values
@@ -26,6 +30,7 @@ import TSGraph from './js/TSGraph';
 
 const ChillerDataPage = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [currentTime, setCurrentTime] = useState('');
   const [showPicker, setShowPicker] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
@@ -43,28 +48,26 @@ const ChillerDataPage = () => {
     Tev: '',
   });
   const [xValuesState1, setXValuesState1] = useState([]);
-const [yValuesState1, setYValuesState1] = useState([]);
-const [xValuesState2, setXValuesState2] = useState([]);
-const [yValuesState2, setYValuesState2] = useState([]);
-const [xValuesState3, setXValuesState3] = useState([]);
-const [yValuesState3, setYValuesState3] = useState([]);
-const [xValuesState4, setXValuesState4] = useState([]);
-const [yValuesState4, setYValuesState4] = useState([]);
+  const [yValuesState1, setYValuesState1] = useState([]);
+  const [xValuesState2, setXValuesState2] = useState([]);
+  const [yValuesState2, setYValuesState2] = useState([]);
+  const [xValuesState3, setXValuesState3] = useState([]);
+  const [yValuesState3, setYValuesState3] = useState([]);
+  const [xValuesState4, setXValuesState4] = useState([]);
+  const [yValuesState4, setYValuesState4] = useState([]);
 
-const [state1h, setState1h] = useState(null);
-const [state2h, setState2h] = useState(null);
-const [state2sH, setState2sH] = useState(null);
-const [state3h, setState3h] = useState(null);
-const [state4h, setState4h] = useState(null);
+  const [state1h, setState1h] = useState(null);
+  const [state2h, setState2h] = useState(null);
+  const [state2sH, setState2sH] = useState(null);
+  const [state3h, setState3h] = useState(null);
+  const [state4h, setState4h] = useState(null);
+
+  const [selectedRowIndex, setSelectedRowIndex] = useState(null);
 
 
 
-  const onChange = (event, date) => {
-    setShowPicker(false); // Hide the picker
-    if (date) {
-      setSelectedDate(date); // Update state if a date was selected
-    }
-  };
+
+
 
   useEffect(() => {
     fetchRecords();
@@ -88,7 +91,7 @@ const [state4h, setState4h] = useState(null);
 
   const handleCalculate = () => {
     if (!selectedRecord) return;
-  
+
     const evapP = (parseFloat(selectedRecord.evaporator.Pe) / 1000).toFixed(5);
     const evapT = parseFloat(selectedRecord.evaporator.Te);
     const compP = (parseFloat(selectedRecord.compressor.Pcom) / 1000).toFixed(5);
@@ -97,56 +100,56 @@ const [state4h, setState4h] = useState(null);
     const conT = parseFloat(selectedRecord.condenser.Tcon);
     const evP = parseFloat(selectedRecord.evaporator.Pe);
     const evT = parseFloat(selectedRecord.expansionValve.Tev);
-  
+
     if (!isNaN(evapP) && !isNaN(evapT) && !isNaN(compP) && !isNaN(compT) && !isNaN(conP) && !isNaN(conT)) {
       const evapProperties = calcEvap(evapP, evapT);
       const evapH_final = evapProperties?.h_final;
       const evapS_final = evapProperties?.s_final;
-  
+
       const compProperties = calcComp(compP, compT);
       const compH_final = compProperties?.h_final;
       const compS_final = compProperties?.s_final;
-  
+
       const comp2sProperties = calcComp2s(compP, evapS_final);
       const temp2s = comp2sProperties?.temperature2s;
       const comp2sH_final = comp2sProperties?.h_final;
-  
+
       const conProperties = CalcCond(conP, conT);
       const conH_final = conProperties?.h_final;
       const conS_final = conProperties?.s_final;
-  
+
       const EVProperties = CalcEV(evT, conProperties?.TempNormalized);
       const EVS_final = EVProperties?.s_final;
-  
+
       // Set results for all stages
       setEvapResult({
         h_final: evapH_final?.toFixed(2),
         s_final: evapS_final?.toFixed(4),
       });
-  
+
       setCompResult({
         h_final: compH_final?.toFixed(2),
         s_final: compS_final?.toFixed(4),
       });
-  
+
       setComp2sResult({
         temp: temp2s?.toFixed(1),
         h_final: comp2sH_final?.toFixed(2)
       });
-  
+
       setConResult({
         h_final: conH_final?.toFixed(2),
         s_final: conS_final?.toFixed(4),
       });
-  
+
       setEVResult({
         s_final: EVS_final?.toFixed(4),
       });
     } else {
-      console.error("❌ Missing data for calculation.");
+      // console.error("❌ Missing data for calculation.");
     }
   };
-  
+
   // Update the state1h, state2h, etc. values after the result states are set
   useEffect(() => {
     if (evapResult && compResult && comp2sResult && conResult) {
@@ -155,29 +158,29 @@ const [state4h, setState4h] = useState(null);
       setState2sH(comp2sResult?.h_final);
       setState3h(conResult?.h_final);
       setState4h(conResult?.h_final);
-  
+
       // Log the updated states after they have been set
-      console.log('Updated States: ', {
-        state1h,
-        state2h,
-        state2sH,
-        state3h,
-        state4h,
-      });
+      // console.log('Updated States: ', {
+      //   state1h,
+      //   state2h,
+      //   state2sH,
+      //   state3h,
+      //   state4h,
+      // });
     }
   }, [evapResult, compResult, comp2sResult, conResult]);
-  
+
   // Use useEffect to trigger setGraphValues after state updates
   useEffect(() => {
     if (evapResult && compResult && conResult && EVResult) {
       setGraphValues();  // This will only be called after all results are set
     }
   }, [evapResult, compResult, conResult, EVResult]); // Watch for changes to these values
-  
+
 
 
   const fetchRecords = async () => {
-    const data = await fetchChillerRecords(); 
+    const data = await fetchChillerRecords();
     const selectedDateString = selectedDate.toISOString().split('T')[0];
 
     const timeSlots = [];
@@ -203,7 +206,35 @@ const [state4h, setState4h] = useState(null);
     setRecords(mergedData);
   };
 
+  const goToPreviousDate = () => {
+    const prevDate = new Date(selectedDate);
+    prevDate.setDate(prevDate.getDate() - 1);
+    setSelectedDate(prevDate);
+  };
+
+  const goToNextDate = () => {
+    const nextDate = new Date(selectedDate);
+    nextDate.setDate(nextDate.getDate() + 1);
+    setSelectedDate(nextDate);
+  };
+
+
   const handleAddRecord = async () => {
+    // Check if any of the fields are empty
+    if (
+      !newRecord.Te ||
+      !newRecord.Pe ||
+      !newRecord.Tc ||
+      !newRecord.Pcom ||
+      !newRecord.Tcon ||
+      !newRecord.Pcon ||
+      !newRecord.Tev
+    ) {
+      // Show an alert if any of the fields are empty
+      alert('Please fill in all the fields before submitting.');
+      return; // Prevent further execution
+    }
+
     if (!selectedRecord) {
       console.error("❌ No selected record.");
       return;
@@ -211,11 +242,11 @@ const [state4h, setState4h] = useState(null);
 
     try {
       const currentDate = selectedDate.toISOString().split('T')[0];
-      const currentTime = new Date().toLocaleTimeString(); 
+      const currentTime = new Date().toLocaleTimeString();
 
       await insertChillerRecord(
         currentDate,
-        selectedRecord.time, 
+        selectedRecord.time,
         currentTime,
         parseFloat(newRecord.Te),
         parseFloat(newRecord.Pe),
@@ -235,17 +266,17 @@ const [state4h, setState4h] = useState(null);
     }
   };
 
-  const [currentTime, setCurrentTime] = useState('');
 
-  useEffect(() => {
-    const updateTime = () => {
-      const now = new Date();
-      setCurrentTime(now.toLocaleTimeString());
-    };
-    updateTime();
-    const interval = setInterval(updateTime, 1000);
-    return () => clearInterval(interval);
-  }, []);
+
+  // useEffect(() => {
+  //   const updateTime = () => {
+  //     const now = new Date();
+  //     setCurrentTime(now.toLocaleTimeString());
+  //   };
+  //   updateTime();
+  //   const interval = setInterval(updateTime, 1000);
+  //   return () => clearInterval(interval);
+  // }, []);
 
   const handleInputChange = (category, name, value) => {
     setInputs({
@@ -279,67 +310,158 @@ const [state4h, setState4h] = useState(null);
       ...record,
       record_time: record.record_time || "Unknown Time",
     });
-  
+
     // Log the record to check the values when clicked
-    console.log('Record:', record);
-  
+    // console.log('Record:', record);
+
     // Trigger the calculation if the results are missing
     if (!evapResult || !compResult || !conResult || !EVResult) {
-      console.log('test');
-      
+      // console.log('test');
+
       // Wait for the calculation to finish before proceeding
       await handleCalculate(); // Ensure the calculation is done before proceeding
     }
-  
-  
+
+
     setModalVisible(true);
   };
-  
-  
+
+
 
   const setGraphValues = () => {
     if (evapResult && compResult && conResult && EVResult) {
       setXValuesState1([evapResult?.s_final, compResult?.s_final]);
       setYValuesState1([selectedRecord.evaporator.Te, selectedRecord.compressor.Tc]);
-  
+
       setXValuesState2([compResult?.s_final, conResult?.s_final]);
       setYValuesState2([selectedRecord.compressor.Tc, selectedRecord.condenser.Tcon]);
-  
+
       setXValuesState3([conResult?.s_final, EVResult?.s_final]);
       setYValuesState3([selectedRecord.condenser.Tcon, selectedRecord.expansionValve.Tev]);
-  
+
       setXValuesState4([EVResult?.s_final, evapResult?.s_final]);
       setYValuesState4([selectedRecord.expansionValve.Tev, selectedRecord.evaporator.Te]);
-  
+
       // Optionally, log the updated values for debugging
-      console.log('xValuesState1:', xValuesState1);
-      console.log('yValuesState1:', yValuesState1);
-      console.log('xValuesState2:', xValuesState2);
-      console.log('yValuesState2:', yValuesState2);
-      console.log('xValuesState3:', xValuesState3);
-      console.log('yValuesState3:', yValuesState3);
-      console.log('xValuesState4:', xValuesState4);
-      console.log('yValuesState4:', yValuesState4);
+      // console.log('xValuesState1:', xValuesState1);
+      // console.log('yValuesState1:', yValuesState1);
+      // console.log('xValuesState2:', xValuesState2);
+      // console.log('yValuesState2:', yValuesState2);
+      // console.log('xValuesState3:', xValuesState3);
+      // console.log('yValuesState3:', yValuesState3);
+      // console.log('xValuesState4:', xValuesState4);
+      // console.log('yValuesState4:', yValuesState4);
     } else {
-      console.error("❌ Missing data for calculations.");
+
     }
   };
-  
+
   const results = conclusionCalculationTable(state1h, state2h, state2sH, state3h, state4h);
+
+  const animationValues = useMemo(
+    () => records.map(() => new Animated.Value(0)),
+    [records.length] // important to recreate on change
+  );
+
+  const triggerAnimations = () => {
+    const animations = animationValues.map((animValue, index) => {
+      animValue.setValue(0); // Reset animation value before replaying
+      return Animated.timing(animValue, {
+        toValue: 1,
+        duration: 400,
+        delay: index * 150,
+        useNativeDriver: true,
+      });
+    });
+    Animated.parallel(animations).start();
+  };
+  
+  useEffect(() => {
+    triggerAnimations();
+  }, [records]); // initial animation
   
 
-  
+  const onChange = (event, selectedDateVal) => {
+    if (event.type === 'set' && selectedDateVal) {
+      setSelectedDate(selectedDateVal);
+      triggerAnimations();
+    }
+    setShowPicker(false); // Always hide after interaction
+  };
+
+  const inflateAnim = useRef(new Animated.Value(0)).current;
+
+useEffect(() => {
+  Animated.timing(inflateAnim, {
+    toValue: 1,
+    duration: 500,
+    useNativeDriver: true,
+  }).start();
+});
+
+const inflateFromBottomLeftStyle = {
+  transform: [
+    {
+      scale: inflateAnim,
+    },
+    {
+      translateX: inflateAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [-400, 0], // Left to Right
+      }),
+    },
+    {
+      translateY: inflateAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [100, 0], // Bottom to Top
+      }),
+    },
+  ],
+  opacity: inflateAnim,
+};
+
+
+
+
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.mainHeader}>Chiller Data</Text>
+    <View style={{ flex: 1, backgroundColor: '#f4f4f4' }}>
 
-      {/* Date Picker Section */}
-      <View style={{ alignItems: 'center', marginBottom: 15 }}>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Text style={{ fontSize: 16, fontWeight: 'bold' }}>Choose Date:</Text>
-            <Button title="Pick Date" onPress={() => setShowPicker(true)} />
+      <LinearGradient
+        colors={['#00c6ff', '#0072ff']} // Two-color gradient
+        style={styles.datePickerContainer}
+      >
+        {/* Date Picker Section */}
+
+
+
+        <Text style={styles.mainHeader}>Chiller Records</Text>
+        <View style={styles.datePickerWrapper}>
+
+
+          <View style={styles.dateNavContainer}>
+            <TouchableOpacity onPress={goToPreviousDate}>
+              <FontAwesome name="chevron-left" size={24} color="#ffffff" />
+            </TouchableOpacity>
+
+            <View style={styles.dateAndIconContainer}>
+              <View style={styles.selectedDateContainer}>
+                <Text style={styles.weekdayText}>
+                  {selectedDate.toLocaleDateString('en-US', { weekday: 'long' })}
+                </Text>
+                <Text style={styles.dateText}>
+                  {selectedDate.toLocaleDateString('en-US', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                  })}
+                </Text>
+              </View>
+
+              <TouchableOpacity onPress={() => setShowPicker(true)} style={styles.iconButton}>
+                <FontAwesome name="calendar" size={30} color="#ffffff" />
+              </TouchableOpacity>
+
               {showPicker && (
                 <DateTimePicker
                   value={selectedDate}
@@ -348,228 +470,395 @@ const [state4h, setState4h] = useState(null);
                   onChange={onChange}
                 />
               )}
+            </View>
+
+
+            <TouchableOpacity onPress={goToNextDate}>
+              <FontAwesome name="chevron-right" size={24} color="#ffffff" />
+            </TouchableOpacity>
+
+
           </View>
+
+
+
+
         </View>
 
-        <Text style={{ fontSize: 18, fontWeight: 'bold', marginTop: 15 }}>
-          {selectedDate.toLocaleDateString('en-US', { weekday: 'long' })}
-        </Text>
-      </View>
+      </LinearGradient>
 
-      {/* Data Table */}
-      <View style={styles.tableContainer}>
-        {records.map((record, index) => (
-          <View key={index} style={styles.recordRow}>
-            <TouchableOpacity onPress={() => handleTimeSlotClick(record)}>
-              <View style={styles.timeRow}>
-                <Text style={styles.recordText}>{record.time}</Text>
-                <Icon
-                  name={getTimeIcon(record.time).name}
-                  size={24}
-                  color={getTimeIcon(record.time).color}
-                  style={styles.icon}
-                />
-              </View>
 
-              <View style={styles.tableHeaderRow}>
-                <Text style={styles.tableHeader}>Component</Text>
-                <Text style={styles.tableHeader}>Temperature (°C)</Text>
-                <Text style={styles.tableHeader}>Pressure (kPa)</Text>
-              </View>
-              <View style={styles.tableRow}>
-                <Text style={styles.tableCell}>Evaporator</Text>
-                <Text style={[styles.tableCell, record.evaporator.Te === "No Data" && styles.noDataText]}>
-                  {record.evaporator.Te}
-                </Text>
-                <Text style={[styles.tableCell, record.evaporator.Pe === "No Data" && styles.noDataText]}>
-                  {record.evaporator.Pe}
-                </Text>
-              </View>
-              <View style={styles.tableRow}>
-                <Text style={styles.tableCell}>Compressor</Text>
-                <Text style={[styles.tableCell, record.evaporator.Te === "No Data" && styles.noDataText]}>
-                  {record.compressor.Tc}
-                </Text>
-                <Text style={[styles.tableCell, record.evaporator.Pe === "No Data" && styles.noDataText]}>
-                  {record.compressor.Pcom}
-                </Text>
-              </View>
-              <View style={styles.tableRow}>
-                <Text style={styles.tableCell}>Condenser</Text>
-                <Text style={[styles.tableCell, record.evaporator.Te === "No Data" && styles.noDataText]}>
-                  {record.condenser.Tcon}
-                </Text>
-                <Text style={[styles.tableCell, record.evaporator.Pe === "No Data" && styles.noDataText]}>
-                  {record.condenser.Pcon}
-                </Text>
-              </View>
-              <View style={styles.tableRow}>
-                <Text style={styles.tableCell}>Expansion Valve</Text>
-                <Text style={[styles.tableCell, record.evaporator.Pe === "No Data" && styles.noDataText]}>
-                  {record.expansionValve.Tev}
-                </Text>
-                <Text style={styles.tableCell}>-</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-        ))}
-      </View>
 
-      {/* Modal : Popup*/}
-      <Modal visible={modalVisible} animationType="slide" transparent>
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Record for {selectedRecord?.time}</Text>
+      <ScrollView contentContainerStyle={styles.container}>
+        {/* Data Table */}
+        <View style={styles.tableContainer}>
+        {records.map((record, index) => {
+          const animValue = animationValues[index];
+
+          if (!animValue) return null; // fallback safety
+
+          const scaleAndFade = {
+            opacity: animValue,
+            transform: [
+              {
+                scale: animValue.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.85, 1],
+                }),
+              },
+            ],
+          };
+
+      return (
+        <Animated.View key={index} style={[styles.recordRow, scaleAndFade]}>
             
-            {/* If no data available*/}
-            {selectedRecord?.evaporator.Te === "No Data" ? (
-              <>
-                <Text style={styles.noDataText}>Current Time: {currentTime}</Text>
-                <View style={styles.line} />
-                {/* Evaporator */}
-                <Text style={[styles.textBold]}>Evaporator</Text>
-                <View style={styles.inputRow}>
-                  <Text style={styles.label}>Temperature:</Text>
-                  <TextInput placeholder="Te (°C)" style={styles.input} onChangeText={(text) => setNewRecord({ ...newRecord, Te: text })} />
+              <TouchableOpacity onPress={() => handleTimeSlotClick(record)}>
+                <View style={styles.timeRow}>
+                  <Text style={styles.recordText}>{record.time}</Text>
+                  <Icon
+                    name={getTimeIcon(record.time).name}
+                    size={24}
+                    color={getTimeIcon(record.time).color}
+                    style={styles.icon}
+                  />
                 </View>
-                <View style={styles.inputRow}>
-                  <Text style={styles.label}>Pressure:</Text>
-                  <TextInput placeholder="Pe (kPa)" style={styles.input} onChangeText={(text) => setNewRecord({ ...newRecord, Pe: text })} />
-                </View>
-                <View style={styles.line} />
 
-                {/* Compressor */}
-                <Text style={[styles.textBold]}>Compressor</Text>
-                <View style={styles.inputRow}>
-                  <Text style={styles.label}>Temperature:</Text>
-                  <TextInput placeholder="Tcom (°C)" style={styles.input} onChangeText={(text) => setNewRecord({ ...newRecord, Tc: text })} />
+                <View style={styles.tableHeaderRow}>
+                  <Text style={styles.tableHeader}>Component</Text>
+                  <Text style={styles.tableHeader}>Temperature (°C)</Text>
+                  <Text style={styles.tableHeader}>Pressure (kPa)</Text>
                 </View>
-                <View style={styles.inputRow}>
-                  <Text style={styles.label}>Pressure:</Text>
-                  <TextInput placeholder="Pcom (kPa)" style={styles.input} onChangeText={(text) => setNewRecord({ ...newRecord, Pcom: text })} />
+                <View style={styles.tableRow}>
+                  <Text style={styles.tableCell}>Evaporator</Text>
+                  <Text style={[styles.tableCell, record.evaporator.Te === "No Data" && styles.noDataText]}>
+                    {record.evaporator.Te}
+                  </Text>
+                  <Text style={[styles.tableCell, record.evaporator.Pe === "No Data" && styles.noDataText]}>
+                    {record.evaporator.Pe}
+                  </Text>
                 </View>
-                <View style={styles.line} />
+                <View style={styles.tableRow}>
+                  <Text style={styles.tableCell}>Compressor</Text>
+                  <Text style={[styles.tableCell, record.evaporator.Te === "No Data" && styles.noDataText]}>
+                    {record.compressor.Tc}
+                  </Text>
+                  <Text style={[styles.tableCell, record.evaporator.Pe === "No Data" && styles.noDataText]}>
+                    {record.compressor.Pcom}
+                  </Text>
+                </View>
+                <View style={styles.tableRow}>
+                  <Text style={styles.tableCell}>Condenser</Text>
+                  <Text style={[styles.tableCell, record.evaporator.Te === "No Data" && styles.noDataText]}>
+                    {record.condenser.Tcon}
+                  </Text>
+                  <Text style={[styles.tableCell, record.evaporator.Pe === "No Data" && styles.noDataText]}>
+                    {record.condenser.Pcon}
+                  </Text>
+                </View>
+                <View style={[styles.tableRow, { borderBottomLeftRadius: 15, borderBottomRightRadius: 15 }]}>
+                  <Text style={styles.tableCell}>Expansion Valve</Text>
+                  <Text style={[styles.tableCell, record.evaporator.Pe === "No Data" && styles.noDataText]}>
+                    {record.expansionValve.Tev}
+                  </Text>
+                  <Text style={styles.tableCell}>-</Text>
+                </View>
+              </TouchableOpacity>
+            </Animated.View>
+          );
+        })}
+        </View>
 
-                {/* Condenser */}
-                <Text style={[styles.textBold]}>Condenser</Text>
-                <View style={styles.inputRow}>
-                  <Text style={styles.label}>Temperature:</Text>
-                  <TextInput placeholder="Tcon (°C)" style={styles.input} onChangeText={(text) => setNewRecord({ ...newRecord, Tcon: text })} />
-                </View>
-                <View style={styles.inputRow}>
-                  <Text style={styles.label}>Pressure:</Text>
-                  <TextInput placeholder="Pcon (kPa)" style={styles.input} onChangeText={(text) => setNewRecord({ ...newRecord, Pcon: text })} />
-                </View>
-                <View style={styles.line} />
+        {/* Modal : Popup*/}
+        <Modal visible={modalVisible} animationType="slide" transparent>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Chiller Record for {selectedRecord?.time}</Text>
+              <View style={styles.line} />
 
-                {/* Expansion Valve */}
-                <Text style={[styles.textBold]}>Expansion Valve</Text>
-                <View style={styles.inputRow}>
-                  <Text style={styles.label}>Temperature:</Text>
-                  <TextInput placeholder="Tev (°C)" style={styles.input} onChangeText={(text) => setNewRecord({ ...newRecord, Tev: text })} />
-                </View>
-                <View style={styles.line} />
 
-                <Button title="Add Record" onPress={handleAddRecord} />
-                <Button title="Close" onPress={() => setModalVisible(false)} />
-              </>
-            ) : (
-              <>
-
-                {/* When data already available */}
-                {selectedRecord ? (
-                    <ScrollView>
-                  <View style={styles.table}>
+              {/* If no data available*/}
+              {selectedRecord?.evaporator.Te === "No Data" ? (
+                <>
+                  <ScrollView style={{ padding: 10 }}>
                     <Text style={styles.modalText}>
-                      Recorded at: {selectedRecord?.record_time || "Unknown Time"}
+                      Enter Data:
                     </Text>
-                    {/* Table Header */}
-                    <View style={styles.tableHeaderRow}>
-                      <Text style={[styles.tableHeader, styles.boldText, { fontSize: 12, flex: 0.5 }]}>State</Text>
-                      <Text style={[styles.tableHeader, styles.boldText, { fontSize: 12 }]}>T (°C)</Text>
-                      <Text style={[styles.tableHeader, styles.boldText, { fontSize: 12 }]}>P (kPa)</Text>
-                      <Text style={[styles.tableHeader, styles.boldText, { fontSize: 12 }]}>Enthalpy,{'\n'}h (kJ/kg)</Text>
-                      <Text style={[styles.tableHeader, styles.boldText, { fontSize: 12 }]}>Entropy,{'\n'}s (kJ/kg .K)</Text>
-                    </View>
-
+                    {/* <Text style={styles.noDataText}>Current Time: {currentTime}</Text> */}
 
                     {/* Evaporator */}
-                    <View style={styles.tableRow}>
-                      <Text style={[styles.tableCell, { fontSize: 12, flex: 0.5 }]}>1</Text>
-                      <Text style={styles.tableCell}>{selectedRecord.evaporator.Te}</Text>
-                      <Text style={styles.tableCell}>{selectedRecord.evaporator.Pe}</Text>
-                      <Text style={styles.tableCell}>{evapResult?.h_final ?? '-'}</Text>
-                      <Text style={styles.tableCell}>{evapResult?.s_final ?? '-'}</Text>
+                    <View style={styles.sectionEvaporator}>
+                      <Text style={styles.sectionHeader}>Evaporator</Text>
+                      <View style={styles.inputRowEvaporator}>
+                        <Text style={styles.inputLabel}>Temperature</Text>
+                        <TextInput
+                          placeholder="Te (°C)"
+                          placeholderTextColor="#B0B0B0"
+                          style={styles.inputField}
+                          keyboardType="numeric"
+                          onChangeText={(text) => setNewRecord({ ...newRecord, Te: text })}
+                        />
+                      </View>
+                      <View style={styles.inputRowEvaporator}>
+                        <Text style={styles.inputLabel}>Pressure</Text>
+                        <TextInput
+                          placeholder="Pe (kPa)"
+                          placeholderTextColor="#B0B0B0"
+                          style={styles.inputField}
+                          keyboardType="numeric"
+                          onChangeText={(text) => setNewRecord({ ...newRecord, Pe: text })}
+                        />
+                      </View>
                     </View>
 
                     {/* Compressor */}
-                    <View style={styles.tableRow}>
-                      <Text style={[styles.tableCell, { fontSize: 12, flex: 0.5 }]}>2</Text>
-                      <Text style={styles.tableCell}>{selectedRecord.compressor.Tc}</Text>
-                      <Text style={styles.tableCell}>{selectedRecord.compressor.Pcom}</Text>
-                      <Text style={styles.tableCell}>{compResult?.h_final ?? '-'}</Text>
-                      <Text style={styles.tableCell}>{compResult?.s_final ?? '-'}</Text>
-                    </View>
-
-                    <View style={styles.tableRow}>
-                      <Text style={[styles.tableCell, { fontSize: 12, flex: 0.5 }]}>2s</Text>
-                      <Text style={styles.tableCell}>{comp2sResult?.temp ?? '-'}</Text>
-                      <Text style={styles.tableCell}>{selectedRecord.compressor.Pcom}</Text>
-                      <Text style={styles.tableCell}>{comp2sResult?.h_final ?? '-'}</Text>
-                      <Text style={styles.tableCell}>{evapResult?.s_final ?? '-'}</Text>
+                    <View style={styles.sectionCompressor}>
+                      <Text style={styles.sectionHeader}>Compressor</Text>
+                      <View style={styles.inputRowCompressor}>
+                        <Text style={styles.inputLabel}>Temperature</Text>
+                        <TextInput
+                          placeholder="Tcom (°C)"
+                          placeholderTextColor="#B0B0B0"
+                          style={styles.inputField}
+                          keyboardType="numeric"
+                          onChangeText={(text) => setNewRecord({ ...newRecord, Tc: text })}
+                        />
+                      </View>
+                      <View style={styles.inputRowCompressor}>
+                        <Text style={styles.inputLabel}>Pressure</Text>
+                        <TextInput
+                          placeholder="Pcom (kPa)"
+                          placeholderTextColor="#B0B0B0"
+                          style={styles.inputField}
+                          keyboardType="numeric"
+                          onChangeText={(text) => setNewRecord({ ...newRecord, Pcom: text })}
+                        />
+                      </View>
                     </View>
 
                     {/* Condenser */}
-                    <View style={styles.tableRow}>
-                      <Text style={[styles.tableCell, { fontSize: 12, flex: 0.5 }]}>3</Text>
-                      <Text style={styles.tableCell}>{selectedRecord.condenser.Tcon}</Text>
-                      <Text style={styles.tableCell}>{selectedRecord.condenser.Pcon}</Text>
-                      <Text style={styles.tableCell}>{conResult?.h_final ?? '-'}</Text>
-                      <Text style={styles.tableCell}>{conResult?.s_final ?? '-'}</Text>
+                    <View style={styles.sectionCondenser}>
+                      <Text style={styles.sectionHeader}>Condenser</Text>
+                      <View style={styles.inputRowCondenser}>
+                        <Text style={styles.inputLabel}>Temperature</Text>
+                        <TextInput
+                          placeholder="Tcon (°C)"
+                          placeholderTextColor="#B0B0B0"
+                          style={styles.inputField}
+                          keyboardType="numeric"
+                          onChangeText={(text) => setNewRecord({ ...newRecord, Tcon: text })}
+                        />
+                      </View>
+                      <View style={styles.inputRowCondenser}>
+                        <Text style={styles.inputLabel}>Pressure</Text>
+                        <TextInput
+                          placeholder="Pcon (kPa)"
+                          placeholderTextColor="#B0B0B0"
+                          style={styles.inputField}
+                          keyboardType="numeric"
+                          onChangeText={(text) => setNewRecord({ ...newRecord, Pcon: text })}
+                        />
+                      </View>
                     </View>
 
                     {/* Expansion Valve */}
-                    <View style={styles.tableRow}>
-                      <Text style={[styles.tableCell, { fontSize: 12, flex: 0.5 }]}>4</Text>
-                      <Text style={styles.tableCell}>{selectedRecord.expansionValve.Tev}</Text>
-                      <Text style={styles.tableCell}>{selectedRecord.evaporator.Pe}</Text>
-                      <Text style={styles.tableCell}>{conResult?.h_final ?? '-'}</Text>
-                      <Text style={styles.tableCell}>{EVResult?.s_final ?? '-'}</Text>
+                    <View style={styles.sectionExpansionValve}>
+                      <Text style={styles.sectionHeader}>Expansion Valve</Text>
+                      <View style={styles.inputRowExpansionValve}>
+                        <Text style={styles.inputLabel}>Temperature</Text>
+                        <TextInput
+                          placeholder="Tev (°C)"
+                          placeholderTextColor="#B0B0B0"
+                          style={styles.inputField}
+                          keyboardType="numeric"
+                          onChangeText={(text) => setNewRecord({ ...newRecord, Tev: text })}
+                        />
+                      </View>
                     </View>
 
-                    {/* <Text style={styles.header}>T-S Graph</Text> */}
-                    <Text style={{ textAlign: 'center', fontSize: 18, marginTop: 20,marginBottom: -30, fontWeight: 'bold' }}>
-                              T-s Diagram{'\n'}(Temperature vs Entropy)
-                            </Text>
-
-                    <TSGraph 
-                        xValuesState1={xValuesState1}
-                        yValuesState1={yValuesState1}
-                        xValuesState2={xValuesState2}
-                        yValuesState2={yValuesState2}
-                        xValuesState3={xValuesState3}
-                        yValuesState3={yValuesState3}
-                        xValuesState4={xValuesState4}
-                        yValuesState4={yValuesState4}
-                    />
-
-                    <ConclusionTable data={results} />
-
-                  </View>
                   </ScrollView>
-                ) : (
-                  <Text>No Data Available</Text>
-                )}
-                <Button title="Close" onPress={() => setModalVisible(false)} />
-              </>
-              
-            )}
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      paddingHorizontal: 20,
+                      marginTop: 20
+                    }}
+                  >
+                    <TouchableOpacity
+                      onPress={() => setModalVisible(false)}
+                      style={{
+                        backgroundColor: '#D66A62',
+                        width: '45%',
+                        paddingVertical: 10,
+                        paddingHorizontal: 20,
+                        borderRadius: 8,
+                        justifyContent: 'center',
+
+                      }}
+                    >
+                      <Text style={{ paddingTop: 5, paddingBottom: 5, color: '#fff', fontSize: 12, fontWeight: 'bold', textAlign: 'center', }}>
+                        Close
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={handleAddRecord}
+                      style={{
+                        width: '45%',
+                        backgroundColor: '#2196F3',
+                        paddingVertical: 10,
+                        paddingHorizontal: 20,
+                        borderRadius: 8,
+                        justifyContent: 'center'
+                      }}
+                    >
+                      <Text style={{ paddingTop: 5, paddingBottom: 5, color: '#fff', fontSize: 12, fontWeight: 'bold', textAlign: 'center' }}>
+                        Add Record
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+
+                </>
+              ) : (
+                <>
+
+                  {/* When data already available */}
+                  {selectedRecord ? (
+                    <ScrollView>
+                      <View style={styles.table}>
+
+
+                        <Text style={styles.modalText}>
+                          State Data
+                        </Text>
+                        {/* Table Header */}
+                        <View style={styles.tableHeaderRow}>
+                          <Text style={[styles.tableHeader, styles.boldText, { fontSize: 12, flex: 0.5 }]}>State</Text>
+                          <Text style={[styles.tableHeader, styles.boldText, { fontSize: 12 }]}>T (°C)</Text>
+                          <Text style={[styles.tableHeader, styles.boldText, { fontSize: 12 }]}>P (kPa)</Text>
+                          <Text style={[styles.tableHeader, styles.boldText, { fontSize: 12 }]}>Enthalpy,{'\n'}h (kJ/kg)</Text>
+                          <Text style={[styles.tableHeader, styles.boldText, { fontSize: 12 }]}>Entropy,{'\n'}s (kJ/kg .K)</Text>
+                        </View>
+
+
+                        {/* Evaporator */}
+                        <View style={styles.tableRow}>
+                          <Text style={[styles.tableCell, { fontSize: 12, flex: 0.5 }]}>1</Text>
+                          <Text style={styles.tableCell}>{selectedRecord.evaporator.Te}</Text>
+                          <Text style={styles.tableCell}>{selectedRecord.evaporator.Pe}</Text>
+                          <Text style={styles.tableCell}>{evapResult?.h_final ?? '-'}</Text>
+                          <Text style={styles.tableCell}>{evapResult?.s_final ?? '-'}</Text>
+                        </View>
+
+                        {/* Compressor */}
+                        <View style={styles.tableRow}>
+                          <Text style={[styles.tableCell, { fontSize: 12, flex: 0.5 }]}>2</Text>
+                          <Text style={styles.tableCell}>{selectedRecord.compressor.Tc}</Text>
+                          <Text style={styles.tableCell}>{selectedRecord.compressor.Pcom}</Text>
+                          <Text style={styles.tableCell}>{compResult?.h_final ?? '-'}</Text>
+                          <Text style={styles.tableCell}>{compResult?.s_final ?? '-'}</Text>
+                        </View>
+
+                        <View style={styles.tableRow}>
+                          <Text style={[styles.tableCell, { fontSize: 12, flex: 0.5 }]}>2s</Text>
+                          <Text style={styles.tableCell}>{comp2sResult?.temp ?? '-'}</Text>
+                          <Text style={styles.tableCell}>{selectedRecord.compressor.Pcom}</Text>
+                          <Text style={styles.tableCell}>{comp2sResult?.h_final ?? '-'}</Text>
+                          <Text style={styles.tableCell}>{evapResult?.s_final ?? '-'}</Text>
+                        </View>
+
+                        {/* Condenser */}
+                        <View style={styles.tableRow}>
+                          <Text style={[styles.tableCell, { fontSize: 12, flex: 0.5 }]}>3</Text>
+                          <Text style={styles.tableCell}>{selectedRecord.condenser.Tcon}</Text>
+                          <Text style={styles.tableCell}>{selectedRecord.condenser.Pcon}</Text>
+                          <Text style={styles.tableCell}>{conResult?.h_final ?? '-'}</Text>
+                          <Text style={styles.tableCell}>{conResult?.s_final ?? '-'}</Text>
+                        </View>
+
+                        {/* Expansion Valve */}
+                        <View style={[styles.tableRow, { borderBottomLeftRadius: 15, borderBottomRightRadius: 15 }]}>
+                          <Text style={[styles.tableCell, { fontSize: 12, flex: 0.5 }]}>4</Text>
+                          <Text style={styles.tableCell}>{selectedRecord.expansionValve.Tev}</Text>
+                          <Text style={styles.tableCell}>{selectedRecord.evaporator.Pe}</Text>
+                          <Text style={styles.tableCell}>{conResult?.h_final ?? '-'}</Text>
+                          <Text style={styles.tableCell}>{EVResult?.s_final ?? '-'}</Text>
+                        </View>
+
+
+                        {/* <Text style={styles.header}>T-S Graph</Text> */}
+                        <Text style={{ textAlign: 'center', fontSize: 15, marginTop: 20, marginBottom: -50, fontWeight: 'bold' }}>
+                          T-s Diagram{'\n'}(Temperature vs Entropy)
+                        </Text>
+
+                        <TSGraph
+                          xValuesState1={xValuesState1}
+                          yValuesState1={yValuesState1}
+                          xValuesState2={xValuesState2}
+                          yValuesState2={yValuesState2}
+                          xValuesState3={xValuesState3}
+                          yValuesState3={yValuesState3}
+                          xValuesState4={xValuesState4}
+                          yValuesState4={yValuesState4}
+                        />
+
+                        <ConclusionTable data={results} />
+                        <Text style={styles.modalSubtitle}>
+                          Recorded at: {selectedRecord?.record_time || "Unknown Time"}
+                        </Text>
+
+                      </View>
+                    </ScrollView>
+                  ) : (
+                    <Text>No Data Available</Text>
+                  )}
+                  <TouchableOpacity
+                    onPress={() => setModalVisible(false)}
+                    style={{
+                      backgroundColor: '#D66A62',
+                      paddingVertical: 10,
+                      paddingHorizontal: 20,
+                      borderRadius: 8,
+                      alignSelf: 'center',
+                      marginTop: 20
+                    }}
+                  >
+                    <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>
+                      Close
+                    </Text>
+                  </TouchableOpacity>
+                </>
+
+              )}
+            </View>
           </View>
-        </View>
-      </Modal>
+        </Modal>
 
 
-    </ScrollView>
+      </ScrollView>
+      <Animated.View style={[styles.animatedWrapper, inflateFromBottomLeftStyle]}>
+  <TouchableOpacity
+    onPress={() => { router.replace('./mainPage') }}
+    style={styles.backButton}
+  >
+    <FontAwesome5
+      name="arrow-left"
+      size={28}
+      color="#007bff"
+      solid
+      style={{
+        paddingTop: 20,
+        paddingLeft: 30,
+        textAlign: 'left',
+      }}
+    />
+  </TouchableOpacity>
+</Animated.View>
+
+
+
+    </View>
   );
 };
 
@@ -578,17 +867,153 @@ export default ChillerDataPage;
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    padding: 20,
-    paddingTop: 100,
+    padding: 0,
+    paddingTop: 10,
     paddingBottom: 90,
     backgroundColor: '#f4f4f4',
   },
+
+  backButton: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    backgroundColor: '#fff',
+    width: 120,
+    height: 120,
+    borderTopRightRadius: 120,
+    borderTopLeftRadius: 0,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+
+    elevation: 5,  // Android shadow effect
+    shadowColor: '#000',  // iOS shadow color
+    shadowOffset: { width: 0, height: 2 },  // iOS shadow position
+    shadowOpacity: 0.1,  // iOS shadow transparency
+    shadowRadius: 5,  // iOS shadow blur radius
+  },
+
+
+
+  backButtonText: {
+    paddingTop: 20,
+    paddingLeft: 30,
+    textAlign: 'left',
+    color: '#0072ff', // Text color
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+
   mainHeader: {
+    marginTop: 40,
     fontSize: 26,
     fontWeight: 'bold',
     textAlign: 'center',
+    marginBottom: 10,
+    color: '#ffffff', // Text color for the header
+  },
+
+
+  pickDateButton: {
+    backgroundColor: '#ffffff',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+
+  pickDateButtonText: {
+    color: '#0072ff',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+
+
+  // Date Picker Container
+  datePickerContainer: {
+    marginTop: 0,
+    backgroundColor: '#f9f9f9',
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+
+  // Date Picker Wrapper to Center content
+  datePickerWrapper: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // Row Layout for label and button
+  datePickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 15,
   },
+
+  // Date Picker Label
+  datePickerLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginRight: 10,
+    color: '#ffffff', // Text color for label
+  },
+
+  // Styled Text for the selected date
+  selectedDate: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#ffffff', // Blue color for the date
+    textAlign: 'center',
+  },
+
+  dateAndIconContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '75%',
+  },
+
+  selectedDateContainer: {
+    flex: 1,
+  },
+
+  iconButton: {
+    marginLeft: 10,
+  },
+
+  selectedDateContainer: {
+    alignItems: 'center',
+  },
+  dateNavContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+  },
+  navButton: {
+    fontSize: 24,
+    color: '#ffffff',
+    paddingHorizontal: 15,
+  },
+  weekdayText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  dateText: {
+    fontSize: 16,
+    color: '#ffffff',
+  },
+
   textBold: {
     fontSize: 18,
     fontWeight: 'bold',
@@ -598,15 +1023,17 @@ const styles = StyleSheet.create({
     color: 'lightgrey',
   },
   tableContainer: {
+    marginLeft: 20,
+    marginRight: 20,
     marginTop: 20,
   },
   recordRow: {
     backgroundColor: '#ffffff',
     padding: 15,
-    borderRadius: 10,
+    borderRadius: 25,
     marginBottom: 15,
     shadowColor: '#000',
-    shadowOpacity: 0.1,
+    // shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
   },
@@ -629,33 +1056,50 @@ const styles = StyleSheet.create({
   },
   tableHeaderRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingLeft: 5,
-    paddingRight: 5,
-    paddingTop: 5,
-    paddingBottom: 10,
-    marginBottom: 5,
-    backgroundColor: 'lightgrey',
+    backgroundColor: '#0099ff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    elevation: 2, // for Android shadow
+    shadowColor: '#000', // iOS shadow
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    borderTopLeftRadius: 15,
+    borderTopRightRadius: 15,
   },
   tableHeader: {
-    fontSize: 16,
-    fontWeight: 'bold',
     flex: 1,
+    fontSize: 15,
+    fontWeight: '600',
     textAlign: 'center',
+    color: '#ffffff',
   },
   tableRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 5,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    borderLeftWidth: 1, // Left border width
+    borderLeftColor: '#e0e0e0', // Left border color
+    borderRightWidth: 1, // Right border width
+    borderRightColor: '#e0e0e0', // Right border color
+    backgroundColor: '#fff',
   },
   tableCell: {
     flex: 1,
     textAlign: 'center',
+    fontSize: 14,
+    color: '#555',
   },
+
   modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
   modalContent: { backgroundColor: '#fff', padding: 20, borderRadius: 10, width: '90%', maxHeight: '80%' },
-  modalTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 10 },
-  modalText: { fontSize: 18, marginBottom: 10 },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 10, textAlign: 'center' },
+  modalText: { fontSize: 22, marginBottom: 10, color: '#0099ff', fontWeight: 'bold', textAlign: 'center' },
+  modalSubtitle: { fontSize: 14, marginBottom: 10, textAlign: 'center', marginTop: 10 },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -675,6 +1119,107 @@ const styles = StyleSheet.create({
   line: {
     borderBottomWidth: 1,
     borderBottomColor: '#ccc',
-    marginVertical: 10, 
+    marginVertical: 10,
+  },
+
+  sectionEvaporator: {
+    marginBottom: 20,
+    borderBottomColor: '#ddd',
+    paddingBottom: 10,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    padding: 15,
+
+    // Shadow for both Android and iOS
+    elevation: 5,  // Android shadow effect
+    shadowColor: '#000',  // iOS shadow color
+    shadowOffset: { width: 0, height: 2 },  // iOS shadow position
+    shadowOpacity: 0.1,  // iOS shadow transparency
+    shadowRadius: 5,  // iOS shadow blur radius
+  },
+
+  sectionCompressor: {
+    marginBottom: 20,
+
+    borderBottomColor: '#ddd',
+    paddingBottom: 10,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    padding: 15,
+    // Shadow for both Android and iOS
+    elevation: 5,  // Android shadow effect
+    shadowColor: '#000',  // iOS shadow color
+    shadowOffset: { width: 0, height: 2 },  // iOS shadow position
+    shadowOpacity: 0.1,  // iOS shadow transparency
+    shadowRadius: 5,  // iOS shadow blur radius
+  },
+  sectionCondenser: {
+    marginBottom: 20,
+
+    borderBottomColor: '#ddd',
+    paddingBottom: 10,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    padding: 15,
+    // Shadow for both Android and iOS
+    elevation: 5,  // Android shadow effect
+    shadowColor: '#000',  // iOS shadow color
+    shadowOffset: { width: 0, height: 2 },  // iOS shadow position
+    shadowOpacity: 0.1,  // iOS shadow transparency
+    shadowRadius: 5,  // iOS shadow blur radius
+  },
+  sectionExpansionValve: {
+    marginBottom: 20,
+
+    borderBottomColor: '#ddd',
+    paddingBottom: 10,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    padding: 15,
+    // Shadow for both Android and iOS
+    elevation: 5,  // Android shadow effect
+    shadowColor: '#000',  // iOS shadow color
+    shadowOffset: { width: 0, height: 2 },  // iOS shadow position
+    shadowOpacity: 0.1,  // iOS shadow transparency
+    shadowRadius: 5,  // iOS shadow blur radius
+  },
+  sectionHeader: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    color: '#333',
+  },
+  inputRowEvaporator: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  inputRowCompressor: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  inputRowCondenser: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  inputRowExpansionValve: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  inputLabel: {
+    fontSize: 14,
+    color: '#555',
+    width: '35%',
+  },
+  inputField: {
+    width: '60%',
+    padding: 8,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+    backgroundColor: '#fff',
   },
 });

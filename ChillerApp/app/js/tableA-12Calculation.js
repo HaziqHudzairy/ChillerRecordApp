@@ -1,5 +1,7 @@
 import tableData from '../json/table_A12.json';
 
+export default tableData;
+
 export function CalcCond(actualP, actualT) {
 
   //sorting

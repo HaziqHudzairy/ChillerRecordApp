@@ -68,14 +68,14 @@ const TSGraphSVG = ({ xValuesState1, yValuesState1, xValuesState2, yValuesState2
     graphPaddingTop + normalize(tempMax - value, 0, tempMax - tempMin, 0, graphHeight);
 
   return (
-    <ScrollView horizontal>
+    <ScrollView horizontal style={{ borderColor: '#ccc', borderWidth: 1, borderRadius: 10, paddingTop: 40 }}>
       <View style={{ padding: 20 }}>
 
         <View style={{ position: 'relative', padding: 10 }}>
           <Svg width={graphWidth} height={fullHeight + 40}>
             <G>
               {/* Background */}
-              <Rect x="60" y="20" width={graphWidth -paddingLeft } height={fullHeight - graphPaddingTop} fill="#f0f0f0" />
+              <Rect x="60" y="20" width={graphWidth -paddingLeft } height={fullHeight - graphPaddingTop} fill="#f4faff" />
 
               {/* Axes */}
               <Line x1={paddingLeft} y1={graphPaddingTop} x2={paddingLeft} y2={graphHeight + graphPaddingTop} stroke="black" />

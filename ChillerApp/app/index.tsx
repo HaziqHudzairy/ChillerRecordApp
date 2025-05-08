@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 export default function SplashScreen() {
   useEffect(() => {
     const timer = setTimeout(() => {
-      router.replace('./recordPage'); // Navigates to the mainPage
+      router.replace('./mainPage'); // Navigates to the mainPage
     }, 2000); // Show splash for 2 seconds
 
     return () => clearTimeout(timer);
