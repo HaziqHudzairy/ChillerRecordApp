@@ -30,26 +30,33 @@ export function CalcCond(actualP, actualT) {
   if (actualT > TempNormalized) {
     const h_final = interpolate(lower.hg, upper.hg, TempNormalized);
     const s_final = interpolate(lower.sg, upper.sg, TempNormalized);
+    const isSuperheated = true;
 
-    return { h_final, s_final, TempNormalized };
+    return { h_final, s_final, TempNormalized, isSuperheated };
   }
   else if (actualT < TempNormalized) {
 
     const h_final = interpolate(lower.hf, upper.hf, TempNormalized);
     const s_final = interpolate(lower.sf, upper.sf, TempNormalized);
+    const isSuperheated = false;
 
-    return { h_final, s_final, TempNormalized };
+    return { h_final, s_final, TempNormalized, isSuperheated};
   }
   else {
     const h_final = interpolate(lower.hg, upper.hg, TempNormalized);
     const s_final = interpolate(lower.sg, upper.sg, TempNormalized);
+    const isSuperheated = true;
 
-    return { h_final, s_final, TempNormalized };
+    return { h_final, s_final, TempNormalized, isSuperheated };
   }
 };
 
 export function CalcEV(actualT, TNormalized) {
   const group = findTemperatureGroup(TNormalized);
+  if(group === null) {
+    console.error('Temperature out of bounds');
+    return 0;
+  }
   const TempNormalized = normalize(actualT, group.lowerGroup.Tsat, group.upperGroup.Tsat);
 
   if (actualT > TempNormalized) {
@@ -92,6 +99,7 @@ function findTemperatureGroup(temp) {
   }
 
   console.warn("Temperature is out of bounds.");
+
   return null;
 }
 

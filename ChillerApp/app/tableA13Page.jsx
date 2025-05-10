@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef,useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Animated, View, Text, FlatList, TouchableOpacity, StyleSheet } from "react-native";
 import { FontAwesome5 } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -9,36 +9,36 @@ import tableData from "./js/tableA-13Calculation";
 const ThermoTable = () => {
 
     const inflateAnim = useRef(new Animated.Value(0)).current;
-    
-      useEffect(() => {
+
+    useEffect(() => {
         Animated.timing(inflateAnim, {
-          toValue: 1,
-          duration: 500,
-          useNativeDriver: true,
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: true,
         }).start();
-      }, []);
-    
-      // Custom transform from bottom-left
-      const inflateFromBottomLeftStyle = {
+    }, []);
+
+    // Custom transform from bottom-left
+    const inflateFromBottomLeftStyle = {
         transform: [
-          {
-            scale: inflateAnim,
-          },
-          {
-            translateX: inflateAnim.interpolate({
-              inputRange: [0, 1],
-              outputRange: [-400, 0], // Left to Right
-            }),
-          },
-          {
-            translateY: inflateAnim.interpolate({
-              inputRange: [0, 1],
-              outputRange: [100, 0], // Bottom to Top
-            }),
-          },
+            {
+                scale: inflateAnim,
+            },
+            {
+                translateX: inflateAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [-400, 0], // Left to Right
+                }),
+            },
+            {
+                translateY: inflateAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [100, 0], // Bottom to Top
+                }),
+            },
         ],
         opacity: inflateAnim,
-      };
+    };
 
     return (
         <View style={{ flex: 1, padding: 0 }}>
@@ -93,25 +93,25 @@ const ThermoTable = () => {
             />
 
             <Animated.View style={[styles.backButtonContainer, inflateFromBottomLeftStyle]}>
-                  <TouchableOpacity
+                <TouchableOpacity
                     onPress={() => {
-                      router.replace('./mainPage');
+                        router.replace('./mainPage');
                     }}
                     style={styles.backButton}
-                  >
+                >
                     <FontAwesome5
-                          name="arrow-left"
-                          size={28}
-                          color="#007bff"
-                          solid
-                          style={{
+                        name="arrow-left"
+                        size={28}
+                        color="#007bff"
+                        solid
+                        style={{
                             paddingTop: 20,
                             paddingLeft: 0,
                             textAlign: 'left',
-                          }}
-                        />
-                  </TouchableOpacity>
-                </Animated.View>
+                        }}
+                    />
+                </TouchableOpacity>
+            </Animated.View>
         </View>
     );
 };
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
         fontSize: 16,
         textAlign: "center",
         color: "#fff",
-        paddingBottom: 10, 
+        paddingBottom: 10,
     },
     tableHeader: {
         flexDirection: 'row',
@@ -199,9 +199,9 @@ const styles = StyleSheet.create({
         position: 'absolute',
         bottom: 0,
         left: 0,
-         // Make sure it's on top of other views
-      },
-      backButton: {
+        // Make sure it's on top of other views
+    },
+    backButton: {
         backgroundColor: '#fff',
         width: 120,
         height: 120,
@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.2,
         shadowRadius: 5,
-      },
+    },
     backButtonIcon: {
         paddingTop: 20,
         paddingLeft: 30,
@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
     },
     lineContainer: {
         backgroundColor: '#0099ff', // Outer background color
-        
+
         height: 4, // Height of the line container
         justifyContent: 'center', // Centers the inner white line
         width: '100%',

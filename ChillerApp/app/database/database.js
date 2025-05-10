@@ -27,6 +27,17 @@ export const setupDatabase = async () => {
   }
 };
 
+export const resetDatabase = async () => {
+  try {
+    await db.execAsync(`DROP TABLE IF EXISTS chiller_records;`);
+    console.log('✅ Table dropped');
+    await setupDatabase(); // Recreate table
+  } catch (error) {
+    console.error('❌ Error resetting database:', error);
+  }
+};
+
+
 // Function to get database instance
 export const getDBConnection = () => db;
 

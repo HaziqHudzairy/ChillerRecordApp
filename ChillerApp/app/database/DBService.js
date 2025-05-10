@@ -12,6 +12,18 @@ export const insertChillerRecord = async (date, time, record_time, Te, Pe, Tc, P
       [date, time, record_time, Te, Pe, Tc, Pcom, Tcon, Pcon, Tev]
     );
     console.log('✅ Record inserted successfully');
+    console.log('Record:', {
+      date,
+      time,
+      record_time,
+      Te,
+      Pe,
+      Tc,
+      Pcom,
+      Tcon,
+      Pcon,
+      Tev
+    });
   } catch (error) {
     console.error('❌ Insert error:', error);
   }

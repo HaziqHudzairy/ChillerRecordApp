@@ -21,6 +21,7 @@ export default function RootLayout() {
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="mainPage" options={{ headerShown: false }} />
         <Stack.Screen name="recordPage" options={{ headerShown: false }} />
         <Stack.Screen name="tableA12Page" options={{ headerShown: false }} />

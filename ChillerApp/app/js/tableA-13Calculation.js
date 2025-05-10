@@ -3,16 +3,63 @@ import tableData from '../json/table_A13.json';
 export default tableData;
 
 export function calcEvap(inputPressure, actualTemp){
-    return findPressureBounds(inputPressure, actualTemp);
+
+    const evapResult = findPressureBounds(inputPressure, actualTemp);
+    const result = isActualTempHigherThanTSat(inputPressure, actualTemp);
+    //console.log(result); 
+    if (evapResult) {
+        evapResult.isSuperheated = result; // ✅ Add flag directly
+    }
+    return evapResult;
 }
 
 export function calcComp(inputPressure, actualTemp){
-    return findPressureBounds(inputPressure, actualTemp);
+    const compResult = findPressureBounds(inputPressure, actualTemp);
+    const result = isActualTempHigherThanTSat(inputPressure, actualTemp);
+    //console.log(result);
+    if (compResult) {
+        compResult.isSuperheated = result; // ✅ Add flag directly
+    }
+    console.log("compResult", compResult);
+    return compResult;
 }
 
-export function calcComp2s(inputPressure, evapS){
-    return findPressureBounds2s(inputPressure, evapS);
+export function calcComp2s(inputPressure, evapS) {
+    if (evapS == 0) {
+        return {
+            h_final: 0,
+            temperature2s: 0
+        };
+    }
+
+    const comp2s = findPressureBounds2s(inputPressure, evapS);
+    return comp2s;
 }
+
+
+export function isActualTempHigherThanTSat(inputPressure, actualTemp) {
+    if (!Array.isArray(tableData)) {
+        console.error("Error: tableData is not an array.");
+        return null;
+    }
+
+    // Find the nearest pressure point in the table
+    const closestEntry = tableData.reduce((prev, curr) => {
+        return Math.abs(curr.pressure - inputPressure) < Math.abs(prev.pressure - inputPressure)
+            ? curr
+            : prev;
+    });
+
+    if (!closestEntry || typeof closestEntry.T_sat !== 'number') {
+        console.error("Error: T_sat not found in the matched entry.");
+        return null;
+    }
+
+    const T_sat = closestEntry.T_sat;
+
+    return actualTemp < T_sat;
+}
+
 
 function findPressureBounds(inputPressure, actualTemp) {
     if (!Array.isArray(tableData)) {
@@ -41,6 +88,14 @@ function findPressureBounds(inputPressure, actualTemp) {
     }
     //find full data based on the table (find line)
     const tempBounds = findTemperatureBounds(actualTemp, lowerP, upperP);
+    if (tempBounds === null) {
+        console.warn("Temperature is out of range.");
+        return {
+            h_final: 0,
+            s_final: 0,
+            
+        };
+    }
 
     //find P saturated
     const Pnormalized = calculateNormalized(inputPressure, lowerP, upperP);
@@ -69,11 +124,13 @@ function findPressureBounds2s(inputPressure, evapS) {
     }
     //sort to find in between (find section)
     const pressures = tableData.map(entry => entry.pressure).sort((a, b) => a - b);
+    //console.log("pressures", pressures);
     let lowerP = null, upperP = null;
     let lowerIndex = -1, upperIndex = -1;
 
     for (let i = 0; i < pressures.length - 1; i++) {
         if (pressures[i] <= inputPressure && inputPressure <= pressures[i + 1]) {
+            
             lowerP = pressures[i];
             upperP = pressures[i + 1];
             lowerIndex = i;
@@ -96,6 +153,12 @@ function findPressureBounds2s(inputPressure, evapS) {
 
     //find h for state 2s
     const h_final = interpolate(temperature2s, tempBounds.lowerP_T.Tlower, tempBounds.lowerP_T.Tupper, finalBounds.h_Tlower, finalBounds.h_Tupper);
+
+    // console.log("tempBounds:", tempBounds);
+    // console.log("Pnormalized:", Pnormalized);
+    // console.log("finalBounds:", finalBounds);
+    // console.log("temperature2s:", temperature2s);
+    // console.log("h_final:", h_final);
 
     return { temperature2s, h_final };
 }
@@ -150,6 +213,7 @@ function findTemperatureBounds(actualTemp, lowerP, upperP) {
         return null;
     }
 
+
     return {
         lowerP_T: {
             Tlower: Tlower_LP, Tupper: Tupper_LP,
@@ -199,6 +263,8 @@ function interpolateHS(Pnormalized, tempBounds) {
 }
 
 function interpolateHS2(Pnormalized, tempBounds) {
+    
+    
     if (!tempBounds) {
         console.error("Error: Temperature bounds data is missing.");
         return null;
@@ -209,6 +275,8 @@ function interpolateHS2(Pnormalized, tempBounds) {
 
     const h_Tlower = h_s_LP_lower.h + Pnormalized * (h_s_UP_lower.h - h_s_LP_lower.h);
     const s_Tlower = h_s_LP_lower.s + Pnormalized * (h_s_UP_lower.s - h_s_LP_lower.s);
+
+    
 
     const h_Tupper = h_s_LP_upper.h + Pnormalized * (h_s_UP_upper.h - h_s_LP_upper.h);
     const s_Tupper = h_s_LP_upper.s + Pnormalized * (h_s_UP_upper.s - h_s_LP_upper.s);
@@ -222,6 +290,8 @@ function interpolateHS2(Pnormalized, tempBounds) {
 }
 
 function interpolateFinalHS(Tnormalized, finalBounds) {
+    // console.log("Tnormalized", Tnormalized);
+    // console.log("finalBounds", finalBounds);
     if (!finalBounds) {
         console.error("Error: Final bounds data is missing.");
         return null;

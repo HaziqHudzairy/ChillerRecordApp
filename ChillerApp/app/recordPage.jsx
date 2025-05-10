@@ -1,5 +1,5 @@
-import {Animated, View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, Button, Alert, Dimensions } from 'react-native';
-import React, { useState, useEffect, useRef,useMemo } from 'react';
+import { Animated, View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, Button, Alert } from 'react-native';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Icon from 'react-native-vector-icons/Feather';
 import { fetchChillerRecords, insertChillerRecord, insertSampleData } from './database/DBService.js';
@@ -10,6 +10,10 @@ import ConclusionTable from './js/conclusionTable.js';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome, FontAwesome5 } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { resetDatabase } from './database/database.js';
+
+
+
 
 
 // Example of x and y values for each state
@@ -29,6 +33,9 @@ import TSGraph from './js/TSGraph';
 // import data from './js/tableDataExport'; // Import data
 
 const ChillerDataPage = () => {
+
+
+
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [currentTime, setCurrentTime] = useState('');
   const [showPicker, setShowPicker] = useState(false);
@@ -51,6 +58,9 @@ const ChillerDataPage = () => {
   const [yValuesState1, setYValuesState1] = useState([]);
   const [xValuesState2, setXValuesState2] = useState([]);
   const [yValuesState2, setYValuesState2] = useState([]);
+  const [xValuesState2s, setXValuesState2s] = useState([]);
+  const [temp2sState, setTemp2sState] = useState(null);
+  const [yValuesState2s, setYValuesState2s] = useState([]);
   const [xValuesState3, setXValuesState3] = useState([]);
   const [yValuesState3, setYValuesState3] = useState([]);
   const [xValuesState4, setXValuesState4] = useState([]);
@@ -63,10 +73,6 @@ const ChillerDataPage = () => {
   const [state4h, setState4h] = useState(null);
 
   const [selectedRowIndex, setSelectedRowIndex] = useState(null);
-
-
-
-
 
 
   useEffect(() => {
@@ -92,6 +98,8 @@ const ChillerDataPage = () => {
   const handleCalculate = () => {
     if (!selectedRecord) return;
 
+
+
     const evapP = (parseFloat(selectedRecord.evaporator.Pe) / 1000).toFixed(5);
     const evapT = parseFloat(selectedRecord.evaporator.Te);
     const compP = (parseFloat(selectedRecord.compressor.Pcom) / 1000).toFixed(5);
@@ -101,22 +109,43 @@ const ChillerDataPage = () => {
     const evP = parseFloat(selectedRecord.evaporator.Pe);
     const evT = parseFloat(selectedRecord.expansionValve.Tev);
 
+    // console.log("Evaporator Pressure:", evapP);
+    // console.log("Evaporator Temperature:", evapT);
+    // console.log("Compressor Pressure:", compP);
+    // console.log("Compressor Temperature:", compT);
+    // console.log("Condenser Pressure:", conP);
+    // console.log("Condenser Temperature:", conT);
+    // console.log("Expansion Valve Temperature:", evT);
+    // console.log("Expansion Valve Pressure:", evP);
+    // console.log("Selected Record:", selectedRecord);
+    // console.log("Selected Record Time:", selectedRecord.record_time);
+
     if (!isNaN(evapP) && !isNaN(evapT) && !isNaN(compP) && !isNaN(compT) && !isNaN(conP) && !isNaN(conT)) {
+      // if(!evT)
+      // {
+      //   const EVProperties = CalcEV(evT, conProperties?.TempNormalized);
+      //   const EVS_final = EVProperties?.s_final;
+      // }
       const evapProperties = calcEvap(evapP, evapT);
       const evapH_final = evapProperties?.h_final;
       const evapS_final = evapProperties?.s_final;
+      const evapSuperheated = evapProperties?.isSuperheated;
+
 
       const compProperties = calcComp(compP, compT);
       const compH_final = compProperties?.h_final;
       const compS_final = compProperties?.s_final;
+      const compSuperheated = compProperties?.isSuperheated;
 
       const comp2sProperties = calcComp2s(compP, evapS_final);
       const temp2s = comp2sProperties?.temperature2s;
+      setTemp2sState(temp2s);
       const comp2sH_final = comp2sProperties?.h_final;
 
       const conProperties = CalcCond(conP, conT);
       const conH_final = conProperties?.h_final;
       const conS_final = conProperties?.s_final;
+      const conSuperheated = conProperties?.isSuperheated;
 
       const EVProperties = CalcEV(evT, conProperties?.TempNormalized);
       const EVS_final = EVProperties?.s_final;
@@ -125,11 +154,13 @@ const ChillerDataPage = () => {
       setEvapResult({
         h_final: evapH_final?.toFixed(2),
         s_final: evapS_final?.toFixed(4),
+        isSuperheated: evapSuperheated,
       });
 
       setCompResult({
         h_final: compH_final?.toFixed(2),
         s_final: compS_final?.toFixed(4),
+        isSuperheated: compSuperheated,
       });
 
       setComp2sResult({
@@ -140,13 +171,74 @@ const ChillerDataPage = () => {
       setConResult({
         h_final: conH_final?.toFixed(2),
         s_final: conS_final?.toFixed(4),
+        isSuperheated: conSuperheated,
       });
 
       setEVResult({
         s_final: EVS_final?.toFixed(4),
       });
+
+      if (conProperties.isSuperheated && compProperties.isSuperheated && evapProperties.isSuperheated) {
+          Alert.alert(
+            'Warning',
+            'All components are in a superheated state. Please check the data.',
+            [{ text: 'OK' }]
+          );
+        }  
+      else if (compProperties.isSuperheated && evapProperties.isSuperheated) {
+          Alert.alert(
+            'Warning',
+            'Both the evaporator and compressor are in a superheated state. Please check the data.',
+            [{ text: 'OK' }]
+          );
+          
+        }else if (conProperties.isSuperheated && compProperties.isSuperheated) {
+          Alert.alert(
+            'Warning',
+            'Both the condenser and compressor are in a superheated state. Please check the data.',
+            [{ text: 'OK' }]
+          );
+
+        }
+        else if (conProperties.isSuperheated && evapProperties.isSuperheated) {
+          Alert.alert(
+            'Warning',
+            'Both the evaporator and condenser are in a superheated state. Please check the data.',
+            [{ text: 'OK' }]
+          );
+        }
+        
+        else {
+          // Check the individual states for evaporator and compressor
+          if (evapProperties.isSuperheated) {
+            Alert.alert(
+              'Warning',
+              'The evaporator is in a superheated state. Please check the data.',
+              [{ text: 'OK' }]
+            );
+          }
+          
+          if (compProperties.isSuperheated) {
+            Alert.alert(
+              'Warning',
+              'The compressor is in a superheated state. Please check the data.',
+              [{ text: 'OK' }]
+            );
+          }
+          if (conProperties.isSuperheated) {
+            Alert.alert(
+              'Warning',
+              'The condenser is in a superheated state. Please check the data.',
+              [{ text: 'OK' }]
+            );
+          }
+
+        }
+        
+                
+
     } else {
-      // console.error("❌ Missing data for calculation.");
+      console.error("❌ Missing data for calculation.");
     }
   };
 
@@ -173,7 +265,7 @@ const ChillerDataPage = () => {
   // Use useEffect to trigger setGraphValues after state updates
   useEffect(() => {
     if (evapResult && compResult && conResult && EVResult) {
-      setGraphValues();  // This will only be called after all results are set
+      setGraphValues(temp2sState.toFixed(1));  // This will only be called after all results are set
     }
   }, [evapResult, compResult, conResult, EVResult]); // Watch for changes to these values
 
@@ -230,11 +322,42 @@ const ChillerDataPage = () => {
       !newRecord.Pcon ||
       !newRecord.Tev
     ) {
-      // Show an alert if any of the fields are empty
-      alert('Please fill in all the fields before submitting.');
-      return; // Prevent further execution
+      alert('Please fill in all required* fields before submitting.');
+      return;
     }
 
+    // Parse pressure inputs as floats
+    const Pe = parseFloat(newRecord.Pe);
+    const Pcom = parseFloat(newRecord.Pcom);
+    const Pcon = parseFloat(newRecord.Pcon);
+
+    // Check pressure ranges
+    const isPeInvalid = Pe < 60.0 || Pe > 1600.0;
+    const isPcomInvalid = Pcom < 60.0 || Pcom > 1600.0;
+    const isPconInvalid = Pcon < 60.0 || Pcon > 3000.0;
+
+    // Compose alert message
+    if (isPeInvalid && isPcomInvalid && isPconInvalid) {
+      alert('Pressure for Evaporator/Compressor out of range for Table A-13, Pressure for Condenser out of range for Table A-12');
+      return;
+    } else if (isPeInvalid && isPcomInvalid) {
+      alert('Pressure for Evaporator and Compressor out of range for Table A-13');
+      return;
+    } else if ((isPeInvalid || isPcomInvalid) && isPconInvalid) {
+      alert('Pressure for Evaporator/Compressor out of range for Table A-13, Pressure for Condenser out of range for Table A-12');
+      return;
+    } else if (isPeInvalid) {
+      alert('Pressure for Evaporator out of range for Table A-13');
+      return;
+    } else if (isPcomInvalid) {
+      alert('Pressure for Compressor out of range for Table A-13');
+      return;
+    } else if (isPconInvalid) {
+      alert('Pressure for Condenser out of range for Table A-12');
+      return;
+    }
+
+    // Proceed if all values are valid
     if (!selectedRecord) {
       console.error("❌ No selected record.");
       return;
@@ -249,11 +372,11 @@ const ChillerDataPage = () => {
         selectedRecord.time,
         currentTime,
         parseFloat(newRecord.Te),
-        parseFloat(newRecord.Pe),
+        Pe,
         parseFloat(newRecord.Tc),
-        parseFloat(newRecord.Pcom),
+        Pcom,
         parseFloat(newRecord.Tcon),
-        parseFloat(newRecord.Pcon),
+        Pcon,
         parseFloat(newRecord.Tev)
       );
 
@@ -265,6 +388,7 @@ const ChillerDataPage = () => {
       console.error("❌ Error adding record:", error);
     }
   };
+
 
 
 
@@ -312,7 +436,7 @@ const ChillerDataPage = () => {
     });
 
     // Log the record to check the values when clicked
-    // console.log('Record:', record);
+    //console.log('Record:', record);
 
     // Trigger the calculation if the results are missing
     if (!evapResult || !compResult || !conResult || !EVResult) {
@@ -320,21 +444,28 @@ const ChillerDataPage = () => {
 
       // Wait for the calculation to finish before proceeding
       await handleCalculate(); // Ensure the calculation is done before proceeding
-    }
 
+      
+    }
+    
 
     setModalVisible(true);
   };
 
 
 
-  const setGraphValues = () => {
+  const setGraphValues = (temp2s) => {
     if (evapResult && compResult && conResult && EVResult) {
       setXValuesState1([evapResult?.s_final, compResult?.s_final]);
       setYValuesState1([selectedRecord.evaporator.Te, selectedRecord.compressor.Tc]);
 
-      setXValuesState2([compResult?.s_final, conResult?.s_final]);
-      setYValuesState2([selectedRecord.compressor.Tc, selectedRecord.condenser.Tcon]);
+      setXValuesState2([compResult?.s_final, evapResult?.s_final]);
+      setYValuesState2([selectedRecord.compressor.Tc, temp2s]);
+
+      setXValuesState2s([evapResult?.s_final, conResult?.s_final]);
+      console.log('test', xValuesState2s);
+      setYValuesState2s([temp2s, selectedRecord.condenser.Tcon]);
+      console.log('test2', yValuesState2s);
 
       setXValuesState3([conResult?.s_final, EVResult?.s_final]);
       setYValuesState3([selectedRecord.condenser.Tcon, selectedRecord.expansionValve.Tev]);
@@ -375,11 +506,11 @@ const ChillerDataPage = () => {
     });
     Animated.parallel(animations).start();
   };
-  
+
   useEffect(() => {
     triggerAnimations();
   }, [records]); // initial animation
-  
+
 
   const onChange = (event, selectedDateVal) => {
     if (event.type === 'set' && selectedDateVal) {
@@ -391,34 +522,34 @@ const ChillerDataPage = () => {
 
   const inflateAnim = useRef(new Animated.Value(0)).current;
 
-useEffect(() => {
-  Animated.timing(inflateAnim, {
-    toValue: 1,
-    duration: 500,
-    useNativeDriver: true,
-  }).start();
-});
+  useEffect(() => {
+    Animated.timing(inflateAnim, {
+      toValue: 1,
+      duration: 500,
+      useNativeDriver: true,
+    }).start();
+  });
 
-const inflateFromBottomLeftStyle = {
-  transform: [
-    {
-      scale: inflateAnim,
-    },
-    {
-      translateX: inflateAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: [-400, 0], // Left to Right
-      }),
-    },
-    {
-      translateY: inflateAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: [100, 0], // Bottom to Top
-      }),
-    },
-  ],
-  opacity: inflateAnim,
-};
+  const inflateFromBottomLeftStyle = {
+    transform: [
+      {
+        scale: inflateAnim,
+      },
+      {
+        translateX: inflateAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [-400, 0], // Left to Right
+        }),
+      },
+      {
+        translateY: inflateAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [100, 0], // Bottom to Top
+        }),
+      },
+    ],
+    opacity: inflateAnim,
+  };
 
 
 
@@ -492,80 +623,80 @@ const inflateFromBottomLeftStyle = {
       <ScrollView contentContainerStyle={styles.container}>
         {/* Data Table */}
         <View style={styles.tableContainer}>
-        {records.map((record, index) => {
-          const animValue = animationValues[index];
+          {records.map((record, index) => {
+            const animValue = animationValues[index];
 
-          if (!animValue) return null; // fallback safety
+            if (!animValue) return null; // fallback safety
 
-          const scaleAndFade = {
-            opacity: animValue,
-            transform: [
-              {
-                scale: animValue.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0.85, 1],
-                }),
-              },
-            ],
-          };
+            const scaleAndFade = {
+              opacity: animValue,
+              transform: [
+                {
+                  scale: animValue.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.85, 1],
+                  }),
+                },
+              ],
+            };
 
-      return (
-        <Animated.View key={index} style={[styles.recordRow, scaleAndFade]}>
-            
-              <TouchableOpacity onPress={() => handleTimeSlotClick(record)}>
-                <View style={styles.timeRow}>
-                  <Text style={styles.recordText}>{record.time}</Text>
-                  <Icon
-                    name={getTimeIcon(record.time).name}
-                    size={24}
-                    color={getTimeIcon(record.time).color}
-                    style={styles.icon}
-                  />
-                </View>
+            return (
+              <Animated.View key={index} style={[styles.recordRow, scaleAndFade]}>
 
-                <View style={styles.tableHeaderRow}>
-                  <Text style={styles.tableHeader}>Component</Text>
-                  <Text style={styles.tableHeader}>Temperature (°C)</Text>
-                  <Text style={styles.tableHeader}>Pressure (kPa)</Text>
-                </View>
-                <View style={styles.tableRow}>
-                  <Text style={styles.tableCell}>Evaporator</Text>
-                  <Text style={[styles.tableCell, record.evaporator.Te === "No Data" && styles.noDataText]}>
-                    {record.evaporator.Te}
-                  </Text>
-                  <Text style={[styles.tableCell, record.evaporator.Pe === "No Data" && styles.noDataText]}>
-                    {record.evaporator.Pe}
-                  </Text>
-                </View>
-                <View style={styles.tableRow}>
-                  <Text style={styles.tableCell}>Compressor</Text>
-                  <Text style={[styles.tableCell, record.evaporator.Te === "No Data" && styles.noDataText]}>
-                    {record.compressor.Tc}
-                  </Text>
-                  <Text style={[styles.tableCell, record.evaporator.Pe === "No Data" && styles.noDataText]}>
-                    {record.compressor.Pcom}
-                  </Text>
-                </View>
-                <View style={styles.tableRow}>
-                  <Text style={styles.tableCell}>Condenser</Text>
-                  <Text style={[styles.tableCell, record.evaporator.Te === "No Data" && styles.noDataText]}>
-                    {record.condenser.Tcon}
-                  </Text>
-                  <Text style={[styles.tableCell, record.evaporator.Pe === "No Data" && styles.noDataText]}>
-                    {record.condenser.Pcon}
-                  </Text>
-                </View>
-                <View style={[styles.tableRow, { borderBottomLeftRadius: 15, borderBottomRightRadius: 15 }]}>
-                  <Text style={styles.tableCell}>Expansion Valve</Text>
-                  <Text style={[styles.tableCell, record.evaporator.Pe === "No Data" && styles.noDataText]}>
-                    {record.expansionValve.Tev}
-                  </Text>
-                  <Text style={styles.tableCell}>-</Text>
-                </View>
-              </TouchableOpacity>
-            </Animated.View>
-          );
-        })}
+                <TouchableOpacity onPress={() => handleTimeSlotClick(record)}>
+                  <View style={styles.timeRow}>
+                    <Text style={styles.recordText}>{record.time}</Text>
+                    <Icon
+                      name={getTimeIcon(record.time).name}
+                      size={24}
+                      color={getTimeIcon(record.time).color}
+                      style={styles.icon}
+                    />
+                  </View>
+
+                  <View style={styles.tableHeaderRow}>
+                    <Text style={styles.tableHeader}>Component</Text>
+                    <Text style={styles.tableHeader}>Temperature (°C)</Text>
+                    <Text style={styles.tableHeader}>Pressure (kPa)</Text>
+                  </View>
+                  <View style={styles.tableRow}>
+                    <Text style={styles.tableCell}>Evaporator</Text>
+                    <Text style={[styles.tableCell, record.evaporator.Te === "No Data" && styles.noDataText]}>
+                      {record.evaporator.Te}
+                    </Text>
+                    <Text style={[styles.tableCell, record.evaporator.Pe === "No Data" && styles.noDataText]}>
+                      {record.evaporator.Pe}
+                    </Text>
+                  </View>
+                  <View style={styles.tableRow}>
+                    <Text style={styles.tableCell}>Compressor</Text>
+                    <Text style={[styles.tableCell, record.evaporator.Te === "No Data" && styles.noDataText]}>
+                      {record.compressor.Tc}
+                    </Text>
+                    <Text style={[styles.tableCell, record.evaporator.Pe === "No Data" && styles.noDataText]}>
+                      {record.compressor.Pcom}
+                    </Text>
+                  </View>
+                  <View style={styles.tableRow}>
+                    <Text style={styles.tableCell}>Condenser</Text>
+                    <Text style={[styles.tableCell, record.evaporator.Te === "No Data" && styles.noDataText]}>
+                      {record.condenser.Tcon}
+                    </Text>
+                    <Text style={[styles.tableCell, record.evaporator.Pe === "No Data" && styles.noDataText]}>
+                      {record.condenser.Pcon}
+                    </Text>
+                  </View>
+                  <View style={[styles.tableRow, { borderBottomLeftRadius: 15, borderBottomRightRadius: 15 }]}>
+                    <Text style={styles.tableCell}>Expansion Valve</Text>
+                    <Text style={[styles.tableCell, record.evaporator.Pe === "No Data" && styles.noDataText]}>
+                      {record.expansionValve.Tev}
+                    </Text>
+                    <Text style={styles.tableCell}>-</Text>
+                  </View>
+                </TouchableOpacity>
+              </Animated.View>
+            );
+          })}
         </View>
 
         {/* Modal : Popup*/}
@@ -589,22 +720,22 @@ const inflateFromBottomLeftStyle = {
                     <View style={styles.sectionEvaporator}>
                       <Text style={styles.sectionHeader}>Evaporator</Text>
                       <View style={styles.inputRowEvaporator}>
-                        <Text style={styles.inputLabel}>Temperature</Text>
+                        <Text style={styles.inputLabel}>Temperature <Text style={{ color: 'red' }}>*</Text></Text>
                         <TextInput
                           placeholder="Te (°C)"
                           placeholderTextColor="#B0B0B0"
                           style={styles.inputField}
-                          keyboardType="numeric"
+                          keyboardType="numbers-and-punctuation"
                           onChangeText={(text) => setNewRecord({ ...newRecord, Te: text })}
                         />
                       </View>
                       <View style={styles.inputRowEvaporator}>
-                        <Text style={styles.inputLabel}>Pressure</Text>
+                        <Text style={styles.inputLabel}>Pressure <Text style={{ color: 'red' }}>*</Text></Text>
                         <TextInput
                           placeholder="Pe (kPa)"
                           placeholderTextColor="#B0B0B0"
                           style={styles.inputField}
-                          keyboardType="numeric"
+                          keyboardType="numbers-and-punctuation"
                           onChangeText={(text) => setNewRecord({ ...newRecord, Pe: text })}
                         />
                       </View>
@@ -614,22 +745,22 @@ const inflateFromBottomLeftStyle = {
                     <View style={styles.sectionCompressor}>
                       <Text style={styles.sectionHeader}>Compressor</Text>
                       <View style={styles.inputRowCompressor}>
-                        <Text style={styles.inputLabel}>Temperature</Text>
+                        <Text style={styles.inputLabel}>Temperature <Text style={{ color: 'red' }}>*</Text></Text>
                         <TextInput
                           placeholder="Tcom (°C)"
                           placeholderTextColor="#B0B0B0"
                           style={styles.inputField}
-                          keyboardType="numeric"
+                          keyboardType="numbers-and-punctuation"
                           onChangeText={(text) => setNewRecord({ ...newRecord, Tc: text })}
                         />
                       </View>
                       <View style={styles.inputRowCompressor}>
-                        <Text style={styles.inputLabel}>Pressure</Text>
+                        <Text style={styles.inputLabel}>Pressure <Text style={{ color: 'red' }}>*</Text></Text>
                         <TextInput
                           placeholder="Pcom (kPa)"
                           placeholderTextColor="#B0B0B0"
                           style={styles.inputField}
-                          keyboardType="numeric"
+                          keyboardType="numbers-and-punctuation"
                           onChangeText={(text) => setNewRecord({ ...newRecord, Pcom: text })}
                         />
                       </View>
@@ -644,17 +775,17 @@ const inflateFromBottomLeftStyle = {
                           placeholder="Tcon (°C)"
                           placeholderTextColor="#B0B0B0"
                           style={styles.inputField}
-                          keyboardType="numeric"
+                          keyboardType="numbers-and-punctuation"
                           onChangeText={(text) => setNewRecord({ ...newRecord, Tcon: text })}
                         />
                       </View>
                       <View style={styles.inputRowCondenser}>
-                        <Text style={styles.inputLabel}>Pressure</Text>
+                        <Text style={styles.inputLabel}>Pressure <Text style={{ color: 'red' }}>*</Text></Text>
                         <TextInput
                           placeholder="Pcon (kPa)"
                           placeholderTextColor="#B0B0B0"
                           style={styles.inputField}
-                          keyboardType="numeric"
+                          keyboardType="numbers-and-punctuation"
                           onChangeText={(text) => setNewRecord({ ...newRecord, Pcon: text })}
                         />
                       </View>
@@ -669,7 +800,7 @@ const inflateFromBottomLeftStyle = {
                           placeholder="Tev (°C)"
                           placeholderTextColor="#B0B0B0"
                           style={styles.inputField}
-                          keyboardType="numeric"
+                          keyboardType="numbers-and-punctuation"
                           onChangeText={(text) => setNewRecord({ ...newRecord, Tev: text })}
                         />
                       </View>
@@ -745,33 +876,131 @@ const inflateFromBottomLeftStyle = {
                         {/* Evaporator */}
                         <View style={styles.tableRow}>
                           <Text style={[styles.tableCell, { fontSize: 12, flex: 0.5 }]}>1</Text>
-                          <Text style={styles.tableCell}>{selectedRecord.evaporator.Te}</Text>
+                          <Text style={styles.tableCell}>
+                            <Text style={styles.tableCell}>
+                              {selectedRecord.evaporator.Te}
+                            </Text>
+                            {evapResult?.isSuperheated && (
+                              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <Text style={{ color: 'red', fontSize: 10 }}>
+                                  {" "} {/* Add a space between text */}
+                                </Text>
+                                <FontAwesome
+                                  name="exclamation-circle"
+                                  size={12}
+                                  color="red"
+                                  style={{ marginLeft: 0 }} // Creates gap
+                                />
+                              </View>
+                            )}
+                          </Text>
                           <Text style={styles.tableCell}>{selectedRecord.evaporator.Pe}</Text>
-                          <Text style={styles.tableCell}>{evapResult?.h_final ?? '-'}</Text>
-                          <Text style={styles.tableCell}>{evapResult?.s_final ?? '-'}</Text>
+                          <Text style={styles.tableCell}>
+                            {Number(evapResult?.h_final) === 0 ? (
+                              <Text style={{ color: 'red', fontSize: 10 }}>T out of bounds</Text>
+                            ) : (
+                              evapResult?.h_final ?? '-'
+                            )}
+                          </Text>
+                          <Text style={styles.tableCell}>
+                            {Number(evapResult?.s_final) === 0 ? (
+                              <Text style={{ color: 'red', fontSize: 10 }}>T out of bounds</Text>
+                            ) : (
+                              evapResult?.s_final ?? '-'
+                            )}
+                          </Text>
                         </View>
 
                         {/* Compressor */}
                         <View style={styles.tableRow}>
                           <Text style={[styles.tableCell, { fontSize: 12, flex: 0.5 }]}>2</Text>
-                          <Text style={styles.tableCell}>{selectedRecord.compressor.Tc}</Text>
+                          <Text style={styles.tableCell}>
+                            <Text style={styles.tableCell}>
+                              {selectedRecord.compressor.Tc}
+                            </Text>
+                            {compResult?.isSuperheated && (
+                              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <Text style={{ color: 'red', fontSize: 10 }}>
+                                  {" "} {/* Add a space between text */}
+                                </Text>
+                                <FontAwesome
+                                  name="exclamation-circle"
+                                  size={12}
+                                  color="red"
+                                  style={{ marginLeft: 0 }} // Creates gap
+                                />
+                              </View>
+                            )}
+                          </Text>
                           <Text style={styles.tableCell}>{selectedRecord.compressor.Pcom}</Text>
-                          <Text style={styles.tableCell}>{compResult?.h_final ?? '-'}</Text>
-                          <Text style={styles.tableCell}>{compResult?.s_final ?? '-'}</Text>
+                          <Text style={styles.tableCell}>
+                            {Number(compResult?.h_final) === 0 ? (
+                              <Text style={{ color: 'red', fontSize: 10 }}>T out of bounds</Text>
+                            ) : (
+                              compResult?.h_final ?? '-'
+                            )}
+                          </Text>
+
+                          <Text style={styles.tableCell}>
+                            {Number(compResult?.s_final) === 0 ? (
+                              <Text style={{ color: 'red', fontSize: 10 }}>T out of bounds</Text>
+                            ) : (
+                              compResult?.s_final ?? '-'
+                            )}
+                          </Text>
                         </View>
 
                         <View style={styles.tableRow}>
                           <Text style={[styles.tableCell, { fontSize: 12, flex: 0.5 }]}>2s</Text>
-                          <Text style={styles.tableCell}>{comp2sResult?.temp ?? '-'}</Text>
+                          <Text style={styles.tableCell}>
+                            {Number(comp2sResult?.temp) === 0 ? (
+                              <Text style={{ color: 'red', fontSize: 10 }}>Unable to Calculate</Text>
+                            ) : (
+                              comp2sResult?.temp ?? '-'
+                            )}
+                          </Text>
                           <Text style={styles.tableCell}>{selectedRecord.compressor.Pcom}</Text>
-                          <Text style={styles.tableCell}>{comp2sResult?.h_final ?? '-'}</Text>
-                          <Text style={styles.tableCell}>{evapResult?.s_final ?? '-'}</Text>
+                          <Text style={styles.tableCell}>
+                            {Number(comp2sResult?.h_final) === 0 ? (
+                              <Text style={{ color: 'red', fontSize: 10 }}>Unable to Calculate</Text>
+                            ) : (
+                              comp2sResult?.h_final ?? '-'
+                            )}
+                          </Text>
+
+                          <Text style={styles.tableCell}>
+                            {Number(comp2sResult?.h_final) === 0 ? (
+                              <Text style={{ color: 'red', fontSize: 10 }}>Unable to Calculate</Text>
+                            ) : (
+                              evapResult?.s_final ?? '-'
+                            )}
+                          </Text>
                         </View>
 
                         {/* Condenser */}
                         <View style={styles.tableRow}>
                           <Text style={[styles.tableCell, { fontSize: 12, flex: 0.5 }]}>3</Text>
-                          <Text style={styles.tableCell}>{selectedRecord.condenser.Tcon}</Text>
+                          <Text style={styles.tableCell}>
+                            
+                            <Text style={styles.tableCell}>
+                              {selectedRecord.condenser.Tcon}
+                            </Text>
+                            {conResult?.isSuperheated && (
+                              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <Text style={{ color: 'red', fontSize: 10 }}>
+                                  {" "} {/* Add a space between text */}
+                                </Text>
+                                <FontAwesome
+                                  name="exclamation-circle"
+                                  size={12}
+                                  color="orange"
+                                  style={{ marginLeft: 0 }} // Creates gap
+                                />
+                              </View>
+                            )}
+
+                            
+                          </Text>
                           <Text style={styles.tableCell}>{selectedRecord.condenser.Pcon}</Text>
                           <Text style={styles.tableCell}>{conResult?.h_final ?? '-'}</Text>
                           <Text style={styles.tableCell}>{conResult?.s_final ?? '-'}</Text>
@@ -797,6 +1026,8 @@ const inflateFromBottomLeftStyle = {
                           yValuesState1={yValuesState1}
                           xValuesState2={xValuesState2}
                           yValuesState2={yValuesState2}
+                          xValuesState2s={xValuesState2s}
+                          yValuesState2s={yValuesState2s}
                           xValuesState3={xValuesState3}
                           yValuesState3={yValuesState3}
                           xValuesState4={xValuesState4}
@@ -838,23 +1069,23 @@ const inflateFromBottomLeftStyle = {
 
       </ScrollView>
       <Animated.View style={[styles.animatedWrapper, inflateFromBottomLeftStyle]}>
-  <TouchableOpacity
-    onPress={() => { router.replace('./mainPage') }}
-    style={styles.backButton}
-  >
-    <FontAwesome5
-      name="arrow-left"
-      size={28}
-      color="#007bff"
-      solid
-      style={{
-        paddingTop: 20,
-        paddingLeft: 30,
-        textAlign: 'left',
-      }}
-    />
-  </TouchableOpacity>
-</Animated.View>
+        <TouchableOpacity
+          onPress={() => { router.replace('./mainPage') }}
+          style={styles.backButton}
+        >
+          <FontAwesome5
+            name="arrow-left"
+            size={28}
+            color="#007bff"
+            solid
+            style={{
+              paddingTop: 20,
+              paddingLeft: 30,
+              textAlign: 'left',
+            }}
+          />
+        </TouchableOpacity>
+      </Animated.View>
 
 
 
@@ -1212,10 +1443,10 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 14,
     color: '#555',
-    width: '35%',
+    width: '40%',
   },
   inputField: {
-    width: '60%',
+    width: '55%',
     padding: 8,
     borderWidth: 1,
     borderColor: '#ccc',
