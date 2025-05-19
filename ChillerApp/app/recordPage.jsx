@@ -2,9 +2,9 @@ import { Animated, View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Icon from 'react-native-vector-icons/Feather';
-import { fetchChillerRecords, insertChillerRecord, insertSampleData } from './database/DBService.js';
+import { fetchChillerRecords, insertChillerRecord, insertSampleData, updateChillerRecord } from './database/DBService.js';
 import { calcEvap, calcComp, calcComp2s } from './js/tableA-13Calculation.js';
-import { CalcCond, CalcEV } from './js/tableA-12Calculation.js';
+import { CalcCond, CalcEV, FindTemperatureFromPressure, CalcCondEVAlt } from './js/tableA-12Calculation.js';
 import { conclusionCalculationTable } from './js/conclusionCalculationTable.js';
 import ConclusionTable from './js/conclusionTable.js';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -33,7 +33,6 @@ import TSGraph from './js/TSGraph';
 // import data from './js/tableDataExport'; // Import data
 
 const ChillerDataPage = () => {
-
 
 
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -85,9 +84,11 @@ const ChillerDataPage = () => {
       selectedRecord.evaporator.Te !== "No Data" &&
       selectedRecord.evaporator.Te !== undefined
     ) {
+
       handleCalculate();
     }
   }, [selectedRecord]);
+  const [isEditing, setIsEditing] = useState(false);
 
   const [evapResult, setEvapResult] = useState(null);
   const [compResult, setCompResult] = useState(null);
@@ -108,6 +109,14 @@ const ChillerDataPage = () => {
     const conT = parseFloat(selectedRecord.condenser.Tcon);
     const evP = parseFloat(selectedRecord.evaporator.Pe);
     const evT = parseFloat(selectedRecord.expansionValve.Tev);
+    const isTconCalculated = selectedRecord.isTconCalculated;
+    const isTevCalculated = selectedRecord.isTevCalculated;
+
+    // console.log('selectedRecord:', selectedRecord);
+    // console.log('selectedRecord.isTconCalculated:', selectedRecord?.isTconCalculated);
+
+
+    //  console.log('istconcalc' + selectedRecord.isTconCalculated);
 
     // console.log("Evaporator Pressure:", evapP);
     // console.log("Evaporator Temperature:", evapT);
@@ -129,42 +138,87 @@ const ChillerDataPage = () => {
       const evapProperties = calcEvap(evapP, evapT);
       const evapH_final = evapProperties?.h_final;
       const evapS_final = evapProperties?.s_final;
-      const evapSuperheated = evapProperties?.isSuperheated;
+      const evapSuperheated = evapProperties?.isSubcooled;
 
 
       const compProperties = calcComp(compP, compT);
       const compH_final = compProperties?.h_final;
       const compS_final = compProperties?.s_final;
-      const compSuperheated = compProperties?.isSuperheated;
+      const compSuperheated = compProperties?.isSubcooled;
 
       const comp2sProperties = calcComp2s(compP, evapS_final);
       const temp2s = comp2sProperties?.temperature2s;
       setTemp2sState(temp2s);
       const comp2sH_final = comp2sProperties?.h_final;
 
-      const conProperties = CalcCond(conP, conT);
-      const conH_final = conProperties?.h_final;
-      const conS_final = conProperties?.s_final;
-      const conSuperheated = conProperties?.isSuperheated;
 
-      const EVProperties = CalcEV(evT, conProperties?.TempNormalized);
-      const EVS_final = EVProperties?.s_final;
+
+      let conProperties;
+      let conH_final;
+      let conS_final;
+      let conSuperheated;
+
+      const conPropForSH = CalcCondEVAlt(conP);
+
+      // console.log('isTconCalculated' + isTconCalculated);
+
+      if (isTconCalculated === 1) {
+        conProperties = CalcCondEVAlt(conP);
+        conH_final = conProperties?.h_final;
+        conS_final = conProperties?.s_final;
+        conSuperheated = conProperties?.isSuperheated;
+
+
+      } else if (isTconCalculated === 0) {
+        conProperties = CalcCond(conP, conT);
+        conH_final = conProperties?.h_final;
+        conS_final = conProperties?.s_final;
+        conSuperheated = conProperties?.isSuperheated;
+
+      } else {
+        // console.log("Error: isTconCalculated is not 0 or 1");
+      }
+
+
+      let EVProperties;
+      let EVS_final;
+      let EVSuperheated;
+
+      // console.log('isTconCalculated' + isTevCalculated);
+
+      if (isTevCalculated === 1) {
+        // console.log('Pressure EV: ' + evapP*1000);
+        EVProperties = CalcCondEVAlt(evapP * 1000);
+        EVS_final = EVProperties?.s_final;
+        EVSuperheated = EVProperties?.isSuperheated;
+      }
+      else if (isTevCalculated === 0) {
+        EVProperties = CalcEV(evT, conProperties?.TempNormalized);
+        EVS_final = EVProperties?.s_final;
+        EVSuperheated = EVProperties?.isSuperheated;
+      }
+      else {
+        console.log("Error: isTconCalculated is not 0 or 1");
+      }
+
+
+
 
       // Set results for all stages
       setEvapResult({
         h_final: evapH_final?.toFixed(2),
         s_final: evapS_final?.toFixed(4),
-        isSuperheated: evapSuperheated,
+        isSubcooled: evapSuperheated,
       });
 
       setCompResult({
         h_final: compH_final?.toFixed(2),
         s_final: compS_final?.toFixed(4),
-        isSuperheated: compSuperheated,
+        isSubcooled: compSuperheated,
       });
 
       setComp2sResult({
-        temp: temp2s?.toFixed(1),
+        temp: temp2s?.toFixed(2),
         h_final: comp2sH_final?.toFixed(2)
       });
 
@@ -176,69 +230,65 @@ const ChillerDataPage = () => {
 
       setEVResult({
         s_final: EVS_final?.toFixed(4),
+        isSuperheated: EVSuperheated,
       });
 
-      if (conProperties.isSuperheated && compProperties.isSuperheated && evapProperties.isSuperheated) {
-          Alert.alert(
-            'Warning',
-            'All components are in a superheated state. Please check the data.',
-            [{ text: 'OK' }]
-          );
-        }  
-      else if (compProperties.isSuperheated && evapProperties.isSuperheated) {
-          Alert.alert(
-            'Warning',
-            'Both the evaporator and compressor are in a superheated state. Please check the data.',
-            [{ text: 'OK' }]
-          );
-          
-        }else if (conProperties.isSuperheated && compProperties.isSuperheated) {
-          Alert.alert(
-            'Warning',
-            'Both the condenser and compressor are in a superheated state. Please check the data.',
-            [{ text: 'OK' }]
-          );
+      const states = {
+        evaporator: evapProperties?.isSubcooled ? 'subcooled' : 'normal',
+        compressor: compProperties?.isSubcooled ? 'subcooled' : 'normal',
+        condenser: conProperties?.isSuperheated ? 'superheated' : 'normal',
+        expansionValve: EVProperties?.isSuperheated ? 'superheated' : 'normal'
+      };
 
-        }
-        else if (conProperties.isSuperheated && evapProperties.isSuperheated) {
-          Alert.alert(
-            'Warning',
-            'Both the evaporator and condenser are in a superheated state. Please check the data.',
-            [{ text: 'OK' }]
-          );
-        }
-        
-        else {
-          // Check the individual states for evaporator and compressor
-          if (evapProperties.isSuperheated) {
-            Alert.alert(
-              'Warning',
-              'The evaporator is in a superheated state. Please check the data.',
-              [{ text: 'OK' }]
-            );
-          }
-          
-          if (compProperties.isSuperheated) {
-            Alert.alert(
-              'Warning',
-              'The compressor is in a superheated state. Please check the data.',
-              [{ text: 'OK' }]
-            );
-          }
-          if (conProperties.isSuperheated) {
-            Alert.alert(
-              'Warning',
-              'The condenser is in a superheated state. Please check the data.',
-              [{ text: 'OK' }]
-            );
-          }
+      const warnings = [];
 
-        }
-        
-                
+      if (states.evaporator === 'subcooled') {
+        warnings.push('Evaporator is in a saturated state.');
+      }
+      if (states.compressor === 'subcooled') {
+        warnings.push('Compressor is in a saturated state.');
+      }
+      if (states.condenser === 'superheated') {
+        warnings.push('Condenser is in a superheated state.');
+      }
+      if (states.expansionValve === 'superheated') {
+        warnings.push('Expansion valve is in a superheated state.');
+      }
+
+      if (
+        states.evaporator === 'subcooled' &&
+        states.compressor === 'subcooled' &&
+        states.condenser === 'superheated' &&
+        states.expansionValve === 'superheated'
+      ) {
+        Alert.alert(
+          'Critical Warning',
+          'All components are in abnormal states:\n' +
+          '- Evaporator & Compressor are saturated\n' +
+          '- Condenser & Expansion Valve are superheated\n\n' +
+          'Please check your components.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      if (warnings.length > 0) {
+        Alert.alert(
+          'Warning',
+          warnings.join('\n') + '\n\nPlease check your component(s).',
+          [{ text: 'OK' }]
+        );
+      }
+
+
+
+
+
+
+
 
     } else {
-      console.error("❌ Missing data for calculation.");
+      console.log("Data fetching");
     }
   };
 
@@ -275,8 +325,12 @@ const ChillerDataPage = () => {
     const data = await fetchChillerRecords();
     const selectedDateString = selectedDate.toISOString().split('T')[0];
 
+    // console.log(selectedDateString);
+    // console.log(data);
+
+
     const timeSlots = [];
-    for (let i = 8; i <= 20; i++) {
+    for (let i = 8; i <= 22; i++) {
       let hour = i > 12 ? i - 12 : i;
       let period = i >= 12 ? 'PM' : 'AM';
       timeSlots.push({ time: `${hour}:00 ${period}`, record: null });
@@ -285,18 +339,21 @@ const ChillerDataPage = () => {
     const mergedData = timeSlots.map(slot => {
       const record = data.find(r => r.time === slot.time && r.date === selectedDateString);
       return {
+        id: record ? record.record_id : null, // ✅ Include record ID
         time: slot.time,
-        record_time: record ? record.record_time : null, // Include record_time
+        record_time: record ? record.record_time : null,
         evaporator: record ? { Te: record.Te, Pe: record.Pe } : { Te: "No Data", Pe: "No Data" },
         compressor: record ? { Tc: record.Tc, Pcom: record.Pcom } : { Tc: "No Data", Pcom: "No Data" },
         condenser: record ? { Tcon: record.Tcon, Pcon: record.Pcon } : { Tcon: "No Data", Pcon: "No Data" },
         expansionValve: record ? { Tev: record.Tev } : { Tev: "No Data" },
+        isTconCalculated: record ? record.isTconCalculated : null,
+        isTevCalculated: record ? record.isTevCalculated : null,
       };
     });
 
-
     setRecords(mergedData);
   };
+
 
   const goToPreviousDate = () => {
     const prevDate = new Date(selectedDate);
@@ -312,15 +369,13 @@ const ChillerDataPage = () => {
 
 
   const handleAddRecord = async () => {
-    // Check if any of the fields are empty
+    // Check if required fields (except Tcon and Tev) are empty
     if (
       !newRecord.Te ||
       !newRecord.Pe ||
       !newRecord.Tc ||
       !newRecord.Pcom ||
-      !newRecord.Tcon ||
-      !newRecord.Pcon ||
-      !newRecord.Tev
+      !newRecord.Pcon
     ) {
       alert('Please fill in all required* fields before submitting.');
       return;
@@ -357,7 +412,6 @@ const ChillerDataPage = () => {
       return;
     }
 
-    // Proceed if all values are valid
     if (!selectedRecord) {
       console.error("❌ No selected record.");
       return;
@@ -367,20 +421,52 @@ const ChillerDataPage = () => {
       const currentDate = selectedDate.toISOString().split('T')[0];
       const currentTime = new Date().toLocaleTimeString();
 
+      const isTconCalculated = !newRecord.Tcon || newRecord.Tcon === '-';
+      const isTevCalculated = !newRecord.Tev || newRecord.Tev === '-';
+
+      const TconValue = isTconCalculated
+        ? parseFloat(FindTemperatureFromPressure(Pcon, false).toFixed(2))
+        : parseFloat(newRecord.Tcon).toFixed(2);
+
+      const TevValue = isTevCalculated
+        ? parseFloat(FindTemperatureFromPressure(Pe, false).toFixed(2))
+        : parseFloat(newRecord.Tev).toFixed(2);
+
+
+      // console.log({
+      //   date: currentDate,
+      //   recordTime: selectedRecord.time,
+      //   entryTime: currentTime,
+      //   Te: parseFloat(newRecord.Te).toFixed(2),
+      //   Pe,
+      //   Tc: parseFloat(newRecord.Tc).toFixed(2),
+      //   Pcom,
+      //   Tcon: TconValue,
+      //   isTconCalculated: isTconCalculated ? '1' : '0',
+      //   Pcon,
+      //   Tev: TevValue,
+      //   isTevCalculated: isTevCalculated ? '1' : '0',
+      // });
+
+
       await insertChillerRecord(
         currentDate,
         selectedRecord.time,
         currentTime,
-        parseFloat(newRecord.Te),
+        parseFloat(newRecord.Te).toFixed(2),
         Pe,
-        parseFloat(newRecord.Tc),
+        parseFloat(newRecord.Tc).toFixed(2),
         Pcom,
-        parseFloat(newRecord.Tcon),
+        TconValue,
         Pcon,
-        parseFloat(newRecord.Tev)
+        TevValue,
+        isTconCalculated ? '1' : '0',
+        isTevCalculated ? '1' : '0'
       );
 
+
       await fetchRecords();
+
       setModalVisible(false);
       setNewRecord({ Te: '', Pe: '', Tc: '', Pcom: '', Tcon: '', Pcon: '', Tev: '' });
       console.log("✅ New record added with correct timestamps.");
@@ -388,6 +474,129 @@ const ChillerDataPage = () => {
       console.error("❌ Error adding record:", error);
     }
   };
+
+  const handleUpdateRecord = async () => {
+    // ✅ Check if required fields are filled
+    if (
+      !newRecord.Te ||
+      !newRecord.Pe ||
+      !newRecord.Tc ||
+      !newRecord.Pcom ||
+      !newRecord.Pcon
+    ) {
+      alert('Please fill in all required* fields before updating.');
+      return;
+    };
+
+    // console.log("🔄 Updated record data:", JSON.stringify(newRecord, null, 2));
+
+    // ✅ Parse pressure values
+    const Pe = parseFloat(newRecord.Pe);
+    const Pcom = parseFloat(newRecord.Pcom);
+    const Pcon = parseFloat(newRecord.Pcon);
+
+    // ✅ Validate pressure ranges
+    const isPeInvalid = Pe < 60.0 || Pe > 1600.0;
+    const isPcomInvalid = Pcom < 60.0 || Pcom > 1600.0;
+    const isPconInvalid = Pcon < 60.0 || Pcon > 3000.0;
+
+    if (isPeInvalid && isPcomInvalid && isPconInvalid) {
+      alert('Pressure for Evaporator/Compressor out of range for Table A-13, Pressure for Condenser out of range for Table A-12');
+      return;
+    } else if (isPeInvalid && isPcomInvalid) {
+      alert('Pressure for Evaporator and Compressor out of range for Table A-13');
+      return;
+    } else if ((isPeInvalid || isPcomInvalid) && isPconInvalid) {
+      alert('Pressure for Evaporator/Compressor out of range for Table A-13, Pressure for Condenser out of range for Table A-12');
+      return;
+    } else if (isPeInvalid) {
+      alert('Pressure for Evaporator out of range for Table A-13');
+      return;
+    } else if (isPcomInvalid) {
+      alert('Pressure for Compressor out of range for Table A-13');
+      return;
+    } else if (isPconInvalid) {
+      alert('Pressure for Condenser out of range for Table A-12');
+      return;
+    }
+
+    if (!selectedRecord) {
+      console.error("❌ No selected record to update.");
+      return;
+    }
+
+    try {
+      const isTconCalculated = !newRecord.Tcon || newRecord.Tcon === '-';
+      const isTevCalculated = !newRecord.Tev || newRecord.Tev === '-';
+
+
+      const TconValue = isTconCalculated
+        ? parseFloat(FindTemperatureFromPressure(Pcon, false).toFixed(2))
+        : parseFloat(newRecord.Tcon).toFixed(2);
+
+      const TevValue = isTevCalculated
+        ? parseFloat(FindTemperatureFromPressure(Pe, false).toFixed(2))
+        : parseFloat(newRecord.Tev).toFixed(2);
+
+      // console.log(TevValue);
+
+      const updated = {
+        id: selectedRecord.id,
+        date: selectedDate.toISOString().split('T')[0], // consistent with addRecord
+        time: selectedRecord.time,
+        record_time: selectedRecord.time,
+        Te: parseFloat(newRecord.Te).toFixed(2),
+        Pe,
+        Tc: parseFloat(newRecord.Tc).toFixed(2),
+        Pcom,
+        Tcon: TconValue,
+        Pcon,
+        Tev: TevValue,
+        isTconCalculated: isTconCalculated ? '1' : '0',
+        isTevCalculated: isTevCalculated ? '1' : '0',
+      };
+
+      // console.log("🔄 Updated record data:", JSON.stringify(updated, null, 2));
+
+      // ✅ Update in local state
+      setRecords((prev) =>
+        prev.map((record) =>
+          record.id === selectedRecord.id ? updated : record
+        )
+      );
+
+      // ✅ Update in SQLite
+      await updateChillerRecord(
+        updated.id,
+        updated.date,
+        updated.time,
+        updated.record_time,
+        updated.Te,
+        updated.Pe,
+        updated.Tc,
+        updated.Pcom,
+        updated.Tcon,
+        updated.Pcon,
+        updated.Tev,
+        updated.isTconCalculated,
+        updated.isTevCalculated
+      );
+
+
+      await fetchRecords();
+      setModalVisible(false);
+      setIsEditing(false);
+      setNewRecord({ Te: '', Pe: '', Tc: '', Pcom: '', Tcon: '', Pcon: '', Tev: '' });
+      console.log("✅ Record updated successfully.");
+    } catch (error) {
+      console.error("❌ Failed to update record in database:", error);
+    }
+  };
+
+
+
+
+
 
 
 
@@ -445,9 +654,9 @@ const ChillerDataPage = () => {
       // Wait for the calculation to finish before proceeding
       await handleCalculate(); // Ensure the calculation is done before proceeding
 
-      
+
     }
-    
+
 
     setModalVisible(true);
   };
@@ -463,9 +672,9 @@ const ChillerDataPage = () => {
       setYValuesState2([selectedRecord.compressor.Tc, temp2s]);
 
       setXValuesState2s([evapResult?.s_final, conResult?.s_final]);
-      console.log('test', xValuesState2s);
+      // console.log('test', xValuesState2s);
       setYValuesState2s([temp2s, selectedRecord.condenser.Tcon]);
-      console.log('test2', yValuesState2s);
+      // console.log('test2', yValuesState2s);
 
       setXValuesState3([conResult?.s_final, EVResult?.s_final]);
       setYValuesState3([selectedRecord.condenser.Tcon, selectedRecord.expansionValve.Tev]);
@@ -659,40 +868,84 @@ const ChillerDataPage = () => {
                     <Text style={styles.tableHeader}>Temperature (°C)</Text>
                     <Text style={styles.tableHeader}>Pressure (kPa)</Text>
                   </View>
+
+                  {/* Evaporator */}
                   <View style={styles.tableRow}>
                     <Text style={styles.tableCell}>Evaporator</Text>
-                    <Text style={[styles.tableCell, record.evaporator.Te === "No Data" && styles.noDataText]}>
-                      {record.evaporator.Te}
+                    <Text
+                      style={[
+                        styles.tableCell,
+                        record.evaporator?.Te === "No Data" && styles.noDataText,
+                      ]}
+                    >
+                      {record.evaporator?.Te ?? "N/A"}
                     </Text>
-                    <Text style={[styles.tableCell, record.evaporator.Pe === "No Data" && styles.noDataText]}>
-                      {record.evaporator.Pe}
+                    <Text
+                      style={[
+                        styles.tableCell,
+                        record.evaporator?.Pe === "No Data" && styles.noDataText,
+                      ]}
+                    >
+                      {record.evaporator?.Pe ?? "N/A"}
                     </Text>
                   </View>
+
+                  {/* Compressor */}
                   <View style={styles.tableRow}>
                     <Text style={styles.tableCell}>Compressor</Text>
-                    <Text style={[styles.tableCell, record.evaporator.Te === "No Data" && styles.noDataText]}>
-                      {record.compressor.Tc}
+                    <Text
+                      style={[
+                        styles.tableCell,
+                        record.compressor?.Tc === "No Data" && styles.noDataText,
+                      ]}
+                    >
+                      {record.compressor?.Tc ?? "N/A"}
                     </Text>
-                    <Text style={[styles.tableCell, record.evaporator.Pe === "No Data" && styles.noDataText]}>
-                      {record.compressor.Pcom}
+                    <Text
+                      style={[
+                        styles.tableCell,
+                        record.compressor?.Pcom === "No Data" && styles.noDataText,
+                      ]}
+                    >
+                      {record.compressor?.Pcom ?? "N/A"}
                     </Text>
                   </View>
+
+                  {/* Condenser */}
                   <View style={styles.tableRow}>
                     <Text style={styles.tableCell}>Condenser</Text>
-                    <Text style={[styles.tableCell, record.evaporator.Te === "No Data" && styles.noDataText]}>
-                      {record.condenser.Tcon}
+                    <Text
+                      style={[
+                        styles.tableCell,
+                        record.condenser?.Tcon === "No Data" && styles.noDataText,
+                      ]}
+                    >
+                      {record.condenser?.Tcon ?? "N/A"}
                     </Text>
-                    <Text style={[styles.tableCell, record.evaporator.Pe === "No Data" && styles.noDataText]}>
-                      {record.condenser.Pcon}
+                    <Text
+                      style={[
+                        styles.tableCell,
+                        record.condenser?.Pcon === "No Data" && styles.noDataText,
+                      ]}
+                    >
+                      {record.condenser?.Pcon ?? "N/A"}
                     </Text>
                   </View>
+
+                  {/* Expansion Valve */}
                   <View style={[styles.tableRow, { borderBottomLeftRadius: 15, borderBottomRightRadius: 15 }]}>
                     <Text style={styles.tableCell}>Expansion Valve</Text>
-                    <Text style={[styles.tableCell, record.evaporator.Pe === "No Data" && styles.noDataText]}>
-                      {record.expansionValve.Tev}
+                    <Text
+                      style={[
+                        styles.tableCell,
+                        record.expansionValve?.Tev === "No Data" && styles.noDataText,
+                      ]}
+                    >
+                      {record.expansionValve?.Tev ?? "N/A"}
                     </Text>
                     <Text style={styles.tableCell}>-</Text>
                   </View>
+
                 </TouchableOpacity>
               </Animated.View>
             );
@@ -708,7 +961,7 @@ const ChillerDataPage = () => {
 
 
               {/* If no data available*/}
-              {selectedRecord?.evaporator.Te === "No Data" ? (
+              {selectedRecord?.evaporator.Te === "No Data" || isEditing ? (
                 <>
                   <ScrollView style={{ padding: 10 }}>
                     <Text style={styles.modalText}>
@@ -726,6 +979,7 @@ const ChillerDataPage = () => {
                           placeholderTextColor="#B0B0B0"
                           style={styles.inputField}
                           keyboardType="numbers-and-punctuation"
+                          value={newRecord.Te}
                           onChangeText={(text) => setNewRecord({ ...newRecord, Te: text })}
                         />
                       </View>
@@ -736,6 +990,7 @@ const ChillerDataPage = () => {
                           placeholderTextColor="#B0B0B0"
                           style={styles.inputField}
                           keyboardType="numbers-and-punctuation"
+                          value={newRecord.Pe}
                           onChangeText={(text) => setNewRecord({ ...newRecord, Pe: text })}
                         />
                       </View>
@@ -751,6 +1006,7 @@ const ChillerDataPage = () => {
                           placeholderTextColor="#B0B0B0"
                           style={styles.inputField}
                           keyboardType="numbers-and-punctuation"
+                          value={newRecord.Tc}
                           onChangeText={(text) => setNewRecord({ ...newRecord, Tc: text })}
                         />
                       </View>
@@ -761,6 +1017,7 @@ const ChillerDataPage = () => {
                           placeholderTextColor="#B0B0B0"
                           style={styles.inputField}
                           keyboardType="numbers-and-punctuation"
+                          value={newRecord.Pcom}
                           onChangeText={(text) => setNewRecord({ ...newRecord, Pcom: text })}
                         />
                       </View>
@@ -776,6 +1033,7 @@ const ChillerDataPage = () => {
                           placeholderTextColor="#B0B0B0"
                           style={styles.inputField}
                           keyboardType="numbers-and-punctuation"
+                          value={newRecord.Tcon}
                           onChangeText={(text) => setNewRecord({ ...newRecord, Tcon: text })}
                         />
                       </View>
@@ -786,6 +1044,7 @@ const ChillerDataPage = () => {
                           placeholderTextColor="#B0B0B0"
                           style={styles.inputField}
                           keyboardType="numbers-and-punctuation"
+                          value={newRecord.Pcon}
                           onChangeText={(text) => setNewRecord({ ...newRecord, Pcon: text })}
                         />
                       </View>
@@ -801,6 +1060,7 @@ const ChillerDataPage = () => {
                           placeholderTextColor="#B0B0B0"
                           style={styles.inputField}
                           keyboardType="numbers-and-punctuation"
+                          value={newRecord.Tev}
                           onChangeText={(text) => setNewRecord({ ...newRecord, Tev: text })}
                         />
                       </View>
@@ -816,7 +1076,24 @@ const ChillerDataPage = () => {
                     }}
                   >
                     <TouchableOpacity
-                      onPress={() => setModalVisible(false)}
+                      onPress={() => {
+                        setNewRecord({
+                          Te: '',
+                          Pe: '',
+                          Tc: '',
+                          Pcom: '',
+                          Tcon: '',
+                          Pcon: '',
+                          Tev: '',
+                        });
+                        if (!isEditing) {
+                          setModalVisible(false);
+
+                        }
+                        setIsEditing(false);
+                      }}
+
+
                       style={{
                         backgroundColor: '#D66A62',
                         width: '45%',
@@ -827,26 +1104,26 @@ const ChillerDataPage = () => {
 
                       }}
                     >
-                      <Text style={{ paddingTop: 5, paddingBottom: 5, color: '#fff', fontSize: 12, fontWeight: 'bold', textAlign: 'center', }}>
-                        Close
+                      <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold', textAlign: 'center' }}>
+                        Cancel
                       </Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                      onPress={handleAddRecord}
+                      onPress={isEditing ? handleUpdateRecord : handleAddRecord}
                       style={{
                         width: '45%',
-                        backgroundColor: '#2196F3',
+                        backgroundColor: isEditing ? '#2196F3' : '#2196F3',
                         paddingVertical: 10,
-                        paddingHorizontal: 20,
                         borderRadius: 8,
                         justifyContent: 'center'
                       }}
                     >
-                      <Text style={{ paddingTop: 5, paddingBottom: 5, color: '#fff', fontSize: 12, fontWeight: 'bold', textAlign: 'center' }}>
-                        Add Record
+                      <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold', textAlign: 'center' }}>
+                        {isEditing ? 'Update Record' : 'Add Record'}
                       </Text>
                     </TouchableOpacity>
+
                   </View>
 
 
@@ -880,15 +1157,15 @@ const ChillerDataPage = () => {
                             <Text style={styles.tableCell}>
                               {selectedRecord.evaporator.Te}
                             </Text>
-                            {evapResult?.isSuperheated && (
+                            {evapResult?.isSubcooled && (
                               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                 <Text style={{ color: 'red', fontSize: 10 }}>
                                   {" "} {/* Add a space between text */}
                                 </Text>
-                                <FontAwesome
-                                  name="exclamation-circle"
+                                <FontAwesome5
+                                  name="snowflake"
                                   size={12}
-                                  color="red"
+                                  color="blue"
                                   style={{ marginLeft: 0 }} // Creates gap
                                 />
                               </View>
@@ -918,15 +1195,15 @@ const ChillerDataPage = () => {
                             <Text style={styles.tableCell}>
                               {selectedRecord.compressor.Tc}
                             </Text>
-                            {compResult?.isSuperheated && (
+                            {compResult?.isSubcooled && (
                               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                 <Text style={{ color: 'red', fontSize: 10 }}>
                                   {" "} {/* Add a space between text */}
                                 </Text>
-                                <FontAwesome
-                                  name="exclamation-circle"
+                                <FontAwesome5
+                                  name="snowflake"
                                   size={12}
-                                  color="red"
+                                  color="blue"
                                   style={{ marginLeft: 0 }} // Creates gap
                                 />
                               </View>
@@ -981,7 +1258,7 @@ const ChillerDataPage = () => {
                         <View style={styles.tableRow}>
                           <Text style={[styles.tableCell, { fontSize: 12, flex: 0.5 }]}>3</Text>
                           <Text style={styles.tableCell}>
-                            
+
                             <Text style={styles.tableCell}>
                               {selectedRecord.condenser.Tcon}
                             </Text>
@@ -990,16 +1267,16 @@ const ChillerDataPage = () => {
                                 <Text style={{ color: 'red', fontSize: 10 }}>
                                   {" "} {/* Add a space between text */}
                                 </Text>
-                                <FontAwesome
-                                  name="exclamation-circle"
+                                <FontAwesome5
+                                  name="fire"
                                   size={12}
-                                  color="orange"
+                                  color="red"
                                   style={{ marginLeft: 0 }} // Creates gap
                                 />
                               </View>
                             )}
 
-                            
+
                           </Text>
                           <Text style={styles.tableCell}>{selectedRecord.condenser.Pcon}</Text>
                           <Text style={styles.tableCell}>{conResult?.h_final ?? '-'}</Text>
@@ -1009,7 +1286,24 @@ const ChillerDataPage = () => {
                         {/* Expansion Valve */}
                         <View style={[styles.tableRow, { borderBottomLeftRadius: 15, borderBottomRightRadius: 15 }]}>
                           <Text style={[styles.tableCell, { fontSize: 12, flex: 0.5 }]}>4</Text>
-                          <Text style={styles.tableCell}>{selectedRecord.expansionValve.Tev}</Text>
+                          <Text style={styles.tableCell}>
+                            <Text style={styles.tableCell}>
+                              {selectedRecord.expansionValve.Tev}
+                            </Text>
+                            {EVResult?.isSuperheated && (
+                              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <Text style={{ color: 'red', fontSize: 10 }}>
+                                  {" "} {/* Add a space between text */}
+                                </Text>
+                                <FontAwesome5
+                                  name="fire"
+                                  size={12}
+                                  color="red"
+                                  style={{ marginLeft: 0 }} // Creates gap
+                                />
+                              </View>
+                            )}
+                          </Text>
                           <Text style={styles.tableCell}>{selectedRecord.evaporator.Pe}</Text>
                           <Text style={styles.tableCell}>{conResult?.h_final ?? '-'}</Text>
                           <Text style={styles.tableCell}>{EVResult?.s_final ?? '-'}</Text>
@@ -1044,21 +1338,50 @@ const ChillerDataPage = () => {
                   ) : (
                     <Text>No Data Available</Text>
                   )}
-                  <TouchableOpacity
-                    onPress={() => setModalVisible(false)}
-                    style={{
-                      backgroundColor: '#D66A62',
-                      paddingVertical: 10,
-                      paddingHorizontal: 20,
-                      borderRadius: 8,
-                      alignSelf: 'center',
-                      marginTop: 20
-                    }}
-                  >
-                    <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>
-                      Close
-                    </Text>
-                  </TouchableOpacity>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 20, marginTop: 20 }}>
+                    <TouchableOpacity
+                      onPress={() => setModalVisible(false)}
+                      style={{
+                        backgroundColor: '#D66A62',
+                        width: '45%',
+                        paddingVertical: 10,
+                        borderRadius: 8,
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold', textAlign: 'center' }}>
+                        Close
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={() => {
+                        // Set fields with existing data and switch to edit mode
+                        setNewRecord({
+                          Te: selectedRecord.evaporator.Te?.toString() ?? '',
+                          Pe: selectedRecord.evaporator.Pe?.toString() ?? '',
+                          Tc: selectedRecord.compressor.Tc?.toString() ?? '',
+                          Pcom: selectedRecord.compressor.Pcom?.toString() ?? '',
+                          Tcon: selectedRecord.condenser.Tcon?.toString() ?? '',
+                          Pcon: selectedRecord.condenser.Pcon?.toString() ?? '',
+                          Tev: selectedRecord.expansionValve.Tev?.toString() ?? '',
+                        });
+
+                        setIsEditing(true);
+                      }}
+                      style={{
+                        backgroundColor: '#A9A9A9',
+                        width: '45%',
+                        paddingVertical: 10,
+                        borderRadius: 8,
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold', textAlign: 'center' }}>
+                        Edit
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 </>
 
               )}
@@ -1451,6 +1774,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 5,
+    color: 'black',
     backgroundColor: '#fff',
   },
 });

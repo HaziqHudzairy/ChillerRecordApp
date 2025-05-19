@@ -8,7 +8,15 @@ export function conclusionCalculationTable(state1H, state2H,state2sH, state3H, s
     //calculate Q out
     const Q_out = state2H - state3H;
     //calculate ηc
-    const ηc = Wcs / Wc * 100;
+    let ηc = Wcs / Wc * 100;
+
+        if (state2H < state2sH) {
+            ηc = Wc / Wcs * 100;
+        } else if (state2H > state2sH) {
+            ηc = Wcs / Wc * 100;
+        }
+
+    
     //calculate COP
     const COP = Q_in / Wc;
     //convert to EER

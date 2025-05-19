@@ -8,7 +8,7 @@ export function calcEvap(inputPressure, actualTemp){
     const result = isActualTempHigherThanTSat(inputPressure, actualTemp);
     //console.log(result); 
     if (evapResult) {
-        evapResult.isSuperheated = result; // ✅ Add flag directly
+        evapResult.isSubcooled = result; // ✅ Add flag directly
     }
     return evapResult;
 }
@@ -18,9 +18,9 @@ export function calcComp(inputPressure, actualTemp){
     const result = isActualTempHigherThanTSat(inputPressure, actualTemp);
     //console.log(result);
     if (compResult) {
-        compResult.isSuperheated = result; // ✅ Add flag directly
+        compResult.isSubcooled = result; // ✅ Add flag directly
     }
-    console.log("compResult", compResult);
+    // console.log("compResult", compResult);
     return compResult;
 }
 
@@ -99,9 +99,12 @@ function findPressureBounds(inputPressure, actualTemp) {
 
     //find P saturated
     const Pnormalized = calculateNormalized(inputPressure, lowerP, upperP);
+    // console.log('pNormalize' + Pnormalized);
 
     //find interpolate stage
     const finalBounds = interpolateHS(Pnormalized, tempBounds);
+    // console.log('finalBound Hlower' + finalBounds.h_Tlower);
+    // console.log('finalBound Hupper' + finalBounds.h_Tupper);
 
     //find T saturatedd
     const Tnormalized = calculateNormalized(actualTemp, tempBounds.lowerP_T.Tlower, tempBounds.lowerP_T.Tupper);
@@ -141,12 +144,17 @@ function findPressureBounds2s(inputPressure, evapS) {
 
     //find in between temperature based on entropy evaporator
     const tempBounds = findTemperatureFromEntropy(evapS, lowerP, upperP);
+    // console.log('tLowerUpperP: ' + JSON.stringify(tempBounds.lowerP_T.h_s_LowerT));
+
+
 
     //find p saturated
     const Pnormalized = calculateNormalized(inputPressure, lowerP, upperP);
+    // console.log('Pnormlize'+ Pnormalized);
 
     //find interpolate stage
     const finalBounds = interpolateHS2(Pnormalized, tempBounds);
+    // console.log('finalbound2s hTlower'+ finalBounds.h_Tlower);
 
     //find actual temperature state 2s
     const temperature2s = interpolate(evapS, finalBounds.s_Tlower, finalBounds.s_Tupper, tempBounds.lowerP_T.Tlower, tempBounds.lowerP_T.Tupper);
@@ -165,6 +173,7 @@ function findPressureBounds2s(inputPressure, evapS) {
 
 const interpolate = (x, x0, x1, y0, y1) => {
     return y0 + ((y1 - y0) * ((x - x0) / (x1 - x0)));
+
 };
 
 function findTemperatureBounds(actualTemp, lowerP, upperP) {
@@ -343,6 +352,8 @@ function findTemperatureFromEntropy(evapS, lowerP, upperP) {
     };
 
     const lowerPRange = findTemperatureRangeForLowerP(evapS, lowerPData);
+
+    // console.log('lowerPRange: ', lowerPRange);
 
     if (!lowerPRange) {
         console.error("Error: Could not find temperature range for lower pressure.");

@@ -1,12 +1,117 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, StatusBar } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Image, StatusBar, ScrollView } from 'react-native';
+import { fetchChillerRecords } from './database/DBService.js';
+import { CalcCond, CalcEV, FindTemperatureFromPressure, CalcCondEVAlt } from './js/tableA-12Calculation.js';
+import { calcEvap, calcComp, calcComp2s } from './js/tableA-13Calculation.js';
 import { router } from 'expo-router';
-import { FontAwesome } from '@expo/vector-icons';
+import { FontAwesome, FontAwesome5  } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import DailyCopTable from './js/DailyCopTable';
+import TCOPGraph from './js/TCOPGraph.js';
+
+
+
+
+
 
 const MainPage = () => {
-    return (
+    const [copData, setCopData] = useState([]);
+    useEffect(() => {
+        const fetchAndProcessData = async () => {
+            const data = await fetchChillerRecords();
+            const today = new Date().toISOString().split('T')[0];
 
+            const timeSlots = [];
+            for (let i = 8; i <= 22; i++) {
+                const hour = i > 12 ? i - 12 : i;
+                const period = i >= 12 ? 'PM' : 'AM';
+                timeSlots.push({ time: `${hour}:00 ${period}` });
+            }
+
+            const processed = [];
+
+            for (const slot of timeSlots) {
+    const record = data.find(r => r.time === slot.time && r.date === today);
+
+    if (!record) {
+        processed.push({
+            hour: slot.time,
+            state1H: '-',
+            state2H: '-',
+            state2sH: '-',
+            state3H: '-',
+            state4H: '-',
+        });
+        continue;
+    }
+
+    const {
+        Te, Pe, Tc, Pcom, Tcon, Pcon, Tev,
+        isTconCalculated, isTevCalculated
+    } = record;
+
+    const Pe_Mpa = Pe / 1000;
+    const Pcom_Mpa = Pcom / 1000;
+
+    try {
+        // State 1 - Evaporator
+        const evapProps = calcEvap(Pe_Mpa, Te);
+        const state1H = evapProps?.h_final.toFixed(2);
+        const evapS = evapProps?.s_final;
+
+        // State 2 - Compressor
+        const compProps = calcComp(Pcom_Mpa, Tc);
+        const state2H = compProps?.h_final.toFixed(2);
+
+        // State 2s - Isentropic Compression
+        const comp2sProps = calcComp2s(Pcom_Mpa, evapS);
+        const state2sH = comp2sProps?.h_final.toFixed(2);
+
+        // State 3 - Condenser
+        let conProps, state3H;
+        if (isTconCalculated === 1) {
+            conProps = CalcCondEVAlt(Pcon);
+        } else {
+            conProps = CalcCond(Pcon, Tcon);
+        }
+        state3H = conProps?.h_final.toFixed(2);
+
+        // State 4 - Expansion Valve
+        let state4H = state3H;
+
+        processed.push({
+            hour: slot.time,
+            state1H,
+            state2H,
+            state2sH,
+            state3H,
+            state4H
+        });
+
+    } catch (e) {
+        console.warn(`Error processing time slot ${slot.time}:`, e);
+        processed.push({
+            hour: slot.time,
+            state1H: '-',
+            state2H: '-',
+            state2sH: '-',
+            state3H: '-',
+            state4H: '-',
+        });
+    }
+}
+
+
+            setCopData(processed);
+        };
+
+        fetchAndProcessData();
+    }, []);
+
+    // console.log("Raw data sent" ,copData)
+
+    return (
+        <ScrollView>
         <LinearGradient
             colors={['#0047bb', '#00c6ff', '#0072ff']}
             style={styles.container}
@@ -17,7 +122,7 @@ const MainPage = () => {
 
             {/* Header */}
             <View style={styles.header}>
-                {/* <Image source={require('./assets/icon.png')} style={styles.logo} /> */}
+                <Image source={require('./assets/coolIcon.png')} style={styles.logo} />
                 <Text style={styles.appName}>CoolThermoTrack</Text>
             </View>
 
@@ -59,7 +164,23 @@ const MainPage = () => {
             <View style={styles.bottomContainer}>
 
             </View>
+                    <Text style={[styles.title, {fontSize: 26}]}>Daily Analysis</Text>
+                    <View style={styles.underline} />
+
+                <DailyCopTable data={copData} />
+
+                <Text style={styles.title}>Time vs COP Graph</Text>
+                <View style={[styles.underline, {marginBottom:20}]} />
+
+                <View style={{ padding: 5, marginBottom: -80 }}>
+                    <TCOPGraph data={copData} />
+                </View>
+
+                <Text style={[{textAlign:'center', marginBottom:20}]}>© 2025 CoolThermoTrack</Text>
+
+
         </LinearGradient>
+        </ScrollView>
     );
 };
 
@@ -80,8 +201,8 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     logo: {
-        width: 60,
-        height: 60,
+        width: 40,
+        height: 40,
         marginBottom: 10,
     },
     appName: {
@@ -178,13 +299,27 @@ const styles = StyleSheet.create({
         bottom: 0,
         left: 0,
         right: 0,
-        height: '80%',
+        height: '88%',
         zIndex: 0, // set to 0 or a positive value
         elevation: 0, // optional: make sure it doesn't overlap
         borderTopLeftRadius: 25,
         borderTopRightRadius: 25,
     },
 
+    title:{
+        marginTop:45,
+        textAlign: 'center',
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#00377e',
+    },
+    underline: {
+  width: '100%',
+  height: 0.5,
+  backgroundColor: '#00377e',
+  marginTop: 6,
+  borderRadius: 1,
+},
 
 
 });

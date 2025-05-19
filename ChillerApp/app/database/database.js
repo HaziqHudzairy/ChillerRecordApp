@@ -18,7 +18,9 @@ export const setupDatabase = async () => {
         Pcom REAL NOT NULL,
         Tcon REAL NOT NULL,
         Pcon REAL NOT NULL,
-        Tev REAL NOT NULL
+        Tev REAL NOT NULL,
+        isTconCalculated INTEGER DEFAULT 0,
+        isTevCalculated INTEGER DEFAULT 0
       );
     `);
     console.log('✅ Chiller Records table created successfully');

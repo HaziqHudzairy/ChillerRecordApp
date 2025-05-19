@@ -8,6 +8,9 @@ import tableData from "./js/tableA-13Calculation";
 
 const ThermoTable = () => {
 
+    const [selectedRows, setSelectedRows] = useState({});
+
+
     const inflateAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
@@ -72,22 +75,38 @@ const ThermoTable = () => {
 
                         {/* Sorted Data */}
                         <FlatList
-                            data={Object.keys(table.for_T)
-                                .map((temp) => ({
-                                    T: parseFloat(temp),
-                                    h: table.for_T[temp].h,
-                                    s: table.for_T[temp].s,
-                                }))
-                                .sort((a, b) => a.T - b.T)}
-                            keyExtractor={(item) => item.T.toString()}
-                            renderItem={({ item }) => (
-                                <View style={styles.tableRow}>
-                                    <Text style={styles.tableItem}>{item.T}</Text>
-                                    <Text style={styles.tableItem}>{item.h}</Text>
-                                    <Text style={styles.tableItem}>{item.s}</Text>
-                                </View>
-                            )}
-                        />
+  data={Object.keys(table.for_T)
+    .map((temp) => ({
+      T: parseFloat(temp),
+      h: table.for_T[temp].h,
+      s: table.for_T[temp].s,
+    }))
+    .sort((a, b) => a.T - b.T)}
+  keyExtractor={(item) => item.T.toString()}
+  renderItem={({ item, index }) => {
+    const isSelected = selectedRows[table.pressure] === index;
+
+    return (
+      <TouchableOpacity
+        onPress={() =>
+          setSelectedRows((prev) => ({
+            ...prev,
+            [table.pressure]: index,
+          }))
+        }
+        style={[
+          styles.tableRow,
+          isSelected && { backgroundColor: '#E8F3FE' },
+        ]}
+      >
+        <Text style={styles.tableItem}>{item.T}</Text>
+        <Text style={styles.tableItem}>{item.h}</Text>
+        <Text style={styles.tableItem}>{item.s}</Text>
+      </TouchableOpacity>
+    );
+  }}
+/>
+
                     </View>
                 )}
             />

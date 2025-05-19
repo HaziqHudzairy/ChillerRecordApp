@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Animated, View, Text, FlatList, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
 import { FontAwesome5 } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -11,6 +11,8 @@ import tableData2 from "./js/tableA-12Calculation"; // Import the new table data
 
 
 const ThermoTable = () => {
+
+    const [selectedRow, setSelectedRow] = useState(null);
 
     const inflateAnim = useRef(new Animated.Value(0)).current;
 
@@ -69,16 +71,25 @@ const ThermoTable = () => {
                         <FlatList
                             data={tableData2}
                             keyExtractor={(item, index) => index.toString()}
-                            renderItem={({ item }) => (
-                                <View style={styles.tableRow}>
-                                    <Text style={styles.tableItem}>{item.Pressure}</Text>
-                                    <Text style={styles.tableItem}>{item.Tsat}</Text>
-                                    <Text style={styles.tableItem}>{item.hf}</Text>
-                                    <Text style={styles.tableItem}>{item.sf}</Text>
-                                    <Text style={styles.tableItem}>{item.hg}</Text>
-                                    <Text style={styles.tableItem}>{item.sg}</Text>
-                                </View>
-                            )}
+                            renderItem={({ item, index }) => {
+                                const isSelected = index === selectedRow;
+                                return (
+                                    <TouchableOpacity
+                                        onPress={() => setSelectedRow(index)}
+                                        style={[
+                                            styles.tableRow,
+                                            isSelected && { backgroundColor: '#E8F3FE' }, // Highlight color for selected row
+                                        ]}
+                                    >
+                                        <Text style={styles.tableItem}>{item.Pressure}</Text>
+                                        <Text style={styles.tableItem}>{item.Tsat}</Text>
+                                        <Text style={styles.tableItem}>{item.hf}</Text>
+                                        <Text style={styles.tableItem}>{item.sf}</Text>
+                                        <Text style={styles.tableItem}>{item.hg}</Text>
+                                        <Text style={styles.tableItem}>{item.sg}</Text>
+                                    </TouchableOpacity>
+                                );
+                            }}
                             contentContainerStyle={{ paddingBottom: 20 }}
                         />
                     </View>
