@@ -315,9 +315,9 @@ const ChillerDataPage = () => {
   // Use useEffect to trigger setGraphValues after state updates
   useEffect(() => {
     if (evapResult && compResult && conResult && EVResult) {
-      setGraphValues(temp2sState.toFixed(1));  // This will only be called after all results are set
+      setGraphValues(temp2sState.toFixed(1));
     }
-  }, [evapResult, compResult, conResult, EVResult]); // Watch for changes to these values
+  }, [evapResult, compResult, conResult, EVResult]);
 
 
 
@@ -339,7 +339,7 @@ const ChillerDataPage = () => {
     const mergedData = timeSlots.map(slot => {
       const record = data.find(r => r.time === slot.time && r.date === selectedDateString);
       return {
-        id: record ? record.record_id : null, // ✅ Include record ID
+        id: record ? record.record_id : null,
         time: slot.time,
         record_time: record ? record.record_time : null,
         evaporator: record ? { Te: record.Te, Pe: record.Pe } : { Te: "No Data", Pe: "No Data" },
@@ -542,7 +542,7 @@ const ChillerDataPage = () => {
 
       const updated = {
         id: selectedRecord.id,
-        date: selectedDate.toISOString().split('T')[0], // consistent with addRecord
+        date: selectedDate.toISOString().split('T')[0],
         time: selectedRecord.time,
         record_time: selectedRecord.time,
         Te: parseFloat(newRecord.Te).toFixed(2),
@@ -623,11 +623,11 @@ const ChillerDataPage = () => {
   const getTimeIcon = (time) => {
     // Extract hour and period (AM/PM)
     const [hourStr, period] = time.split(' ');
-    let hour = parseInt(hourStr.split(':')[0]); // Get the hour part
+    let hour = parseInt(hourStr.split(':')[0]);
 
     // Convert to 24-hour format
-    if (period === 'PM' && hour !== 12) hour += 12; // Convert PM hours
-    if (period === 'AM' && hour === 12) hour = 0; // Convert 12 AM to 0
+    if (period === 'PM' && hour !== 12) hour += 12;
+    if (period === 'AM' && hour === 12) hour = 0;
 
     // Assign the correct icon
     if (hour >= 8 && hour < 11) return { name: 'sunrise', color: '#FFA500' }; // Sunrise 🌅
@@ -705,7 +705,7 @@ const ChillerDataPage = () => {
 
   const triggerAnimations = () => {
     const animations = animationValues.map((animValue, index) => {
-      animValue.setValue(0); // Reset animation value before replaying
+      animValue.setValue(0);
       return Animated.timing(animValue, {
         toValue: 1,
         duration: 400,
@@ -747,13 +747,13 @@ const ChillerDataPage = () => {
       {
         translateX: inflateAnim.interpolate({
           inputRange: [0, 1],
-          outputRange: [-400, 0], // Left to Right
+          outputRange: [-400, 0],
         }),
       },
       {
         translateY: inflateAnim.interpolate({
           inputRange: [0, 1],
-          outputRange: [100, 0], // Bottom to Top
+          outputRange: [100, 0],
         }),
       },
     ],
@@ -768,7 +768,7 @@ const ChillerDataPage = () => {
     <View style={{ flex: 1, backgroundColor: '#f4f4f4' }}>
 
       <LinearGradient
-        colors={['#00c6ff', '#0072ff']} // Two-color gradient
+        colors={['#00c6ff', '#0072ff']}
         style={styles.datePickerContainer}
       >
         {/* Date Picker Section */}
@@ -776,6 +776,11 @@ const ChillerDataPage = () => {
 
 
         <Text style={styles.mainHeader}>Chiller Records</Text>
+        <View style={styles.underlineContainer}>
+                            <View style={styles.circle} />
+                            <View style={styles.underlineSmall} />
+                            <View style={styles.circle} />
+                        </View>
         <View style={styles.datePickerWrapper}>
 
 
@@ -1265,13 +1270,13 @@ const ChillerDataPage = () => {
                             {conResult?.isSuperheated && (
                               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                 <Text style={{ color: 'red', fontSize: 10 }}>
-                                  {" "} {/* Add a space between text */}
+                                  {" "}
                                 </Text>
                                 <FontAwesome5
                                   name="fire"
                                   size={12}
                                   color="red"
-                                  style={{ marginLeft: 0 }} // Creates gap
+                                  style={{ marginLeft: 0 }}
                                 />
                               </View>
                             )}
@@ -1293,13 +1298,13 @@ const ChillerDataPage = () => {
                             {EVResult?.isSuperheated && (
                               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                 <Text style={{ color: 'red', fontSize: 10 }}>
-                                  {" "} {/* Add a space between text */}
+                                  {" "}
                                 </Text>
                                 <FontAwesome5
                                   name="fire"
                                   size={12}
                                   color="red"
-                                  style={{ marginLeft: 0 }} // Creates gap
+                                  style={{ marginLeft: 0 }}
                                 />
                               </View>
                             )}
@@ -1427,6 +1432,27 @@ const styles = StyleSheet.create({
     backgroundColor: '#f4f4f4',
   },
 
+  circle: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: '#fff',
+    },
+    underlineContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: 10,
+    },
+
+    underlineSmall: {
+        width: '50%',
+        height: 0.5,
+        backgroundColor: '#fff',
+        borderRadius: 1,
+        marginHorizontal: 10,
+    },
+
   backButton: {
     position: 'absolute',
     bottom: 0,
@@ -1441,11 +1467,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'flex-start',
 
-    elevation: 5,  // Android shadow effect
-    shadowColor: '#000',  // iOS shadow color
-    shadowOffset: { width: 0, height: 2 },  // iOS shadow position
-    shadowOpacity: 0.1,  // iOS shadow transparency
-    shadowRadius: 5,  // iOS shadow blur radius
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
   },
 
 
@@ -1454,7 +1480,7 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingLeft: 30,
     textAlign: 'left',
-    color: '#0072ff', // Text color
+    color: '#0072ff',
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -1464,8 +1490,8 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: 10,
-    color: '#ffffff', // Text color for the header
+    marginBottom: 0,
+    color: '#ffffff',
   },
 
 
@@ -1488,7 +1514,7 @@ const styles = StyleSheet.create({
   },
 
 
-  // Date Picker Container
+
   datePickerContainer: {
     marginTop: 0,
     backgroundColor: '#f9f9f9',
@@ -1500,32 +1526,32 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
 
-  // Date Picker Wrapper to Center content
+
   datePickerWrapper: {
     justifyContent: 'center',
     alignItems: 'center',
   },
 
-  // Row Layout for label and button
+
   datePickerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 15,
   },
 
-  // Date Picker Label
+
   datePickerLabel: {
     fontSize: 16,
     fontWeight: 'bold',
     marginRight: 10,
-    color: '#ffffff', // Text color for label
+    color: '#ffffff',
   },
 
-  // Styled Text for the selected date
+
   selectedDate: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#ffffff', // Blue color for the date
+    color: '#ffffff',
     textAlign: 'center',
   },
 
@@ -1615,8 +1641,8 @@ const styles = StyleSheet.create({
     borderBottomColor: '#ccc',
     paddingVertical: 10,
     paddingHorizontal: 8,
-    elevation: 2, // for Android shadow
-    shadowColor: '#000', // iOS shadow
+    elevation: 2,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -1636,10 +1662,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
-    borderLeftWidth: 1, // Left border width
-    borderLeftColor: '#e0e0e0', // Left border color
-    borderRightWidth: 1, // Right border width
-    borderRightColor: '#e0e0e0', // Right border color
+    borderLeftWidth: 1,
+    borderLeftColor: '#e0e0e0',
+    borderRightWidth: 1,
+    borderRightColor: '#e0e0e0',
     backgroundColor: '#fff',
   },
   tableCell: {
@@ -1683,13 +1709,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9f9f9',
     borderRadius: 8,
     padding: 15,
-
-    // Shadow for both Android and iOS
-    elevation: 5,  // Android shadow effect
-    shadowColor: '#000',  // iOS shadow color
-    shadowOffset: { width: 0, height: 2 },  // iOS shadow position
-    shadowOpacity: 0.1,  // iOS shadow transparency
-    shadowRadius: 5,  // iOS shadow blur radius
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
   },
 
   sectionCompressor: {
@@ -1700,12 +1724,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9f9f9',
     borderRadius: 8,
     padding: 15,
-    // Shadow for both Android and iOS
-    elevation: 5,  // Android shadow effect
-    shadowColor: '#000',  // iOS shadow color
-    shadowOffset: { width: 0, height: 2 },  // iOS shadow position
-    shadowOpacity: 0.1,  // iOS shadow transparency
-    shadowRadius: 5,  // iOS shadow blur radius
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
   },
   sectionCondenser: {
     marginBottom: 20,
@@ -1715,12 +1738,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9f9f9',
     borderRadius: 8,
     padding: 15,
-    // Shadow for both Android and iOS
-    elevation: 5,  // Android shadow effect
-    shadowColor: '#000',  // iOS shadow color
-    shadowOffset: { width: 0, height: 2 },  // iOS shadow position
-    shadowOpacity: 0.1,  // iOS shadow transparency
-    shadowRadius: 5,  // iOS shadow blur radius
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
   },
   sectionExpansionValve: {
     marginBottom: 20,
@@ -1730,12 +1752,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9f9f9',
     borderRadius: 8,
     padding: 15,
-    // Shadow for both Android and iOS
-    elevation: 5,  // Android shadow effect
-    shadowColor: '#000',  // iOS shadow color
-    shadowOffset: { width: 0, height: 2 },  // iOS shadow position
-    shadowOpacity: 0.1,  // iOS shadow transparency
-    shadowRadius: 5,  // iOS shadow blur radius
+
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
   },
   sectionHeader: {
     fontSize: 16,

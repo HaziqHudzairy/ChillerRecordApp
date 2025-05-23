@@ -2,9 +2,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Animated, View, Text, FlatList, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
 import { FontAwesome5 } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient'; // Import LinearGradient
+import { LinearGradient } from 'expo-linear-gradient';
 
-import tableData2 from "./js/tableA-12Calculation"; // Import the new table data
+import tableData2 from "./js/tableA-12Calculation";
 
 //console.log(tableData2); // Log the imported data to check its structure
 
@@ -24,7 +24,6 @@ const ThermoTable = () => {
         }).start();
     }, []);
 
-    // Custom transform from bottom-left
     const inflateFromBottomLeftStyle = {
         transform: [
             {
@@ -33,13 +32,13 @@ const ThermoTable = () => {
             {
                 translateX: inflateAnim.interpolate({
                     inputRange: [0, 1],
-                    outputRange: [-400, 0], // Left to Right
+                    outputRange: [-400, 0],
                 }),
             },
             {
                 translateY: inflateAnim.interpolate({
                     inputRange: [0, 1],
-                    outputRange: [100, 0], // Bottom to Top
+                    outputRange: [100, 0],
                 }),
             },
         ],
@@ -50,7 +49,7 @@ const ThermoTable = () => {
     return (
         <View style={{ flex: 1, padding: 0 }}>
             <LinearGradient
-                colors={['#00c6ff', '#0072ff']} // Apply two-color gradient to the header
+                colors={['#00c6ff', '#0072ff']}
                 style={styles.headerContainer}
             >
                 <Text style={styles.headerText}>Table A-12</Text>
@@ -78,7 +77,7 @@ const ThermoTable = () => {
                                         onPress={() => setSelectedRow(index)}
                                         style={[
                                             styles.tableRow,
-                                            isSelected && { backgroundColor: '#E8F3FE' }, // Highlight color for selected row
+                                            isSelected && { backgroundColor: '#E8F3FE' },
                                         ]}
                                     >
                                         <Text style={styles.tableItem}>{item.Pressure}</Text>
@@ -167,8 +166,8 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
         borderTopLeftRadius: 10,
         borderTopRightRadius: 10,
-        elevation: 2, // for Android shadow
-        shadowColor: '#000', // iOS shadow
+        elevation: 2,
+        shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.1,
         shadowRadius: 2,
@@ -209,8 +208,8 @@ const styles = StyleSheet.create({
         borderBottomColor: '#ccc',
         paddingVertical: 10,
 
-        elevation: 2, // for Android shadow
-        shadowColor: '#000', // iOS shadow
+        elevation: 2,
+        shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.1,
         shadowRadius: 2,
@@ -237,7 +236,6 @@ const styles = StyleSheet.create({
         position: 'absolute',
         bottom: 0,
         left: 0,
-        // Make sure it's on top of other views
     },
     backButton: {
         backgroundColor: '#fff',
@@ -261,18 +259,18 @@ const styles = StyleSheet.create({
         textAlign: 'left',
     },
     lineContainer: {
-        backgroundColor: '#0099ff', // Outer background color
+        backgroundColor: '#0099ff',
 
-        height: 4, // Height of the line container
-        justifyContent: 'center', // Centers the inner white line
+        height: 4,
+        justifyContent: 'center',
         width: '100%',
         alignSelf: 'center',
     },
 
     whiteLine: {
-        backgroundColor: '#ffffff', // White line color
-        height: 2, // Height of the inner white line
-        width: '80%', // Adjust width of the white line
+        backgroundColor: '#ffffff',
+        height: 2,
+        width: '80%',
         alignSelf: 'center',
     }
 

@@ -22,7 +22,7 @@ const ConclusionTable = ({ data }) => {
           key={index}
           style={[
             styles.row,
-            index === tableData.length - 1 && styles.lastRow, // Apply style to the last row
+            index === tableData.length - 1 && styles.lastRow,
           ]}
         >
           <Text style={styles.cellLabel}>{item.label}</Text>
@@ -50,8 +50,8 @@ const styles = StyleSheet.create({
     borderBottomColor: '#ccc',
     paddingVertical: 10,
     paddingHorizontal: 8,
-    elevation: 2, // for Android shadow
-    shadowColor: '#000', // iOS shadow
+    elevation: 2,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
 
-  
+
   row: {
     paddingLeft: 30,
     paddingRight: 30,
@@ -70,15 +70,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
-    borderLeftWidth: 1, // Left border width
-    borderLeftColor: '#e0e0e0', // Left border color
-    borderRightWidth: 1, // Right border width
-    borderRightColor: '#e0e0e0', // Right border color
+    borderLeftWidth: 1,
+    borderLeftColor: '#e0e0e0',
+    borderRightWidth: 1,
+    borderRightColor: '#e0e0e0',
     backgroundColor: '#fff',
   },
   lastRow: {
-    borderBottomLeftRadius: 15, // Apply bottom-left radius
-    borderBottomRightRadius: 15, // Apply bottom-right radius
+    borderBottomLeftRadius: 15,
+    borderBottomRightRadius: 15,
   },
 
   cellLabel: {

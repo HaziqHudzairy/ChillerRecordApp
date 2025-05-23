@@ -44,7 +44,7 @@ export function CalcCond(actualP, actualT) {
     const isSuperheated = false;
     // console.log("Tcond greater than lower tsat and less than upper tsat");
 
-    return { h_final, s_final, TempNormalized, isSuperheated};
+    return { h_final, s_final, TempNormalized, isSuperheated };
   }
   else {
     const h_final = interpolate(lower.hg, upper.hg, TempNormalized);
@@ -58,7 +58,7 @@ export function CalcCond(actualP, actualT) {
 
 export function CalcEV(actualT, TNormalized) {
   const group = findTemperatureGroup(TNormalized);
-  if(group === null) {
+  if (group === null) {
     // console.error('Temperature out of bounds');
     return 0;
   }
@@ -68,7 +68,7 @@ export function CalcEV(actualT, TNormalized) {
     const s_final = interpolate(group.lowerGroup.sg, group.upperGroup.sg, TempNormalized);
     const isSuperheated = true;
     // console.log("Tev greater than upper tsat");
-    
+
     return { s_final, isSuperheated };
   }
   else if (actualT < group.upperGroup.Tsat && actualT > group.lowerGroup.Tsat) {
@@ -87,7 +87,7 @@ export function CalcEV(actualT, TNormalized) {
     return { s_final, isSuperheated };
   }
 }
-export function CalcCondEVAlt(actualP){
+export function CalcCondEVAlt(actualP) {
   const calc = true;
   return FindTemperatureFromPressure(actualP, calc);
 }
@@ -126,7 +126,7 @@ export function FindTemperatureFromPressure(actualP, calc) {
   const T_final = interpolateAuto(lower.Tsat, upper.Tsat, TempNormalized);
   // console.log("Interpolated Temperature:", T_final);
 
-  if (calc){
+  if (calc) {
     const TNormalized = normalizeAuto(parseFloat(T_final.toFixed(2)), lower.Tsat, upper.Tsat);
 
 
@@ -148,11 +148,11 @@ export function FindTemperatureFromPressure(actualP, calc) {
 }
 
 
-function normalize(input, lower, upper){
+function normalize(input, lower, upper) {
   return ((upper - input) / (upper - lower));
 }
 
-function normalizeAuto(input, lower, upper){
+function normalizeAuto(input, lower, upper) {
   // console.log(input+ '-' + lower + '/' + upper + '-' + lower)
   return ((input - lower) / (upper - lower));
 }

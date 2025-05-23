@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { TouchableOpacity, View, Text, ScrollView, Dimensions, StyleSheet } from 'react-native';
-import Svg, { Line, Text as SvgText, Path, G, Rect, Polygon } from 'react-native-svg';
+import Svg, { Line, Text as SvgText, Path, G, Rect, Polygon, Circle } from 'react-native-svg';
 import tableData from '../json/graph_plot.json';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -48,35 +48,35 @@ const TSGraphSVG = ({ xValuesState1, yValuesState1, xValuesState2, yValuesState2
   const state1 = xValuesState1.map((xValue, index) => ({
     x: paddingLeft + normalize(xValue, entropyMin, entropyMax, 0, graphWidth - paddingLeft),
     y: graphPaddingTop + (graphHeight - normalize(yValuesState1[index], tempMin, tempMax, 0, graphHeight)),
-    temp: index === 0 ? yValuesState1[index] : null, // Store only the first temperature value
+    temp: index === 0 ? yValuesState1[index] : null,
     label: '1'
   }));
 
   const state2 = xValuesState2.map((xValue, index) => ({
     x: paddingLeft + normalize(xValue, entropyMin, entropyMax, 0, graphWidth - paddingLeft),
     y: graphPaddingTop + (graphHeight - normalize(yValuesState2[index], tempMin, tempMax, 0, graphHeight)),
-    temp: index === 0 ? yValuesState2[index] : null, // Store only the first temperature value
+    temp: index === 0 ? yValuesState2[index] : null,
     label: '2'
   }));
 
   const state2s = xValuesState2s.map((xValue, index) => ({
     x: paddingLeft + normalize(xValue, entropyMin, entropyMax, 0, graphWidth - paddingLeft),
     y: graphPaddingTop + (graphHeight - normalize(yValuesState2s[index], tempMin, tempMax, 0, graphHeight)),
-    temp: index === 0 ? yValuesState2s[index] : null, // Store only the first temperature value
+    temp: index === 0 ? yValuesState2s[index] : null,
     label: '2s'
   }));
 
   const state3 = xValuesState3.map((xValue, index) => ({
     x: paddingLeft + normalize(xValue, entropyMin, entropyMax, 0, graphWidth - paddingLeft),
     y: graphPaddingTop + (graphHeight - normalize(yValuesState3[index], tempMin, tempMax, 0, graphHeight)),
-    temp: index === 0 ? yValuesState3[index] : null, // Store only the first temperature value
+    temp: index === 0 ? yValuesState3[index] : null,
     label: '3'
   }));
 
   const state4 = xValuesState4.map((xValue, index) => ({
     x: paddingLeft + normalize(xValue, entropyMin, entropyMax, 0, graphWidth - paddingLeft),
     y: graphPaddingTop + (graphHeight - normalize(yValuesState4[index], tempMin, tempMax, 0, graphHeight)),
-    temp: index === 0 ? yValuesState4[index] : null, // Store only the first temperature value
+    temp: index === 0 ? yValuesState4[index] : null,
     label: '4'
   }));
 
@@ -204,17 +204,33 @@ const TSGraphSVG = ({ xValuesState1, yValuesState1, xValuesState2, yValuesState2
                 {/* Curves */}
                 <Path d={toPath(sLiqPoints)} stroke="blue" strokeWidth="2" fill="none" />
                 <Path d={toPath(sVapPoints)} stroke="orange" strokeWidth="2" fill="none" />
-                <Path d={toPath(state1)} stroke="lightblue" strokeWidth="2" fill="none" />
-                {state1.length >= 2 && drawArrowHead(state1[state1.length - 2], state1[state1.length - 1], 'lightblue')}
-                <Path d={toPath(state2)} stroke="red" strokeWidth="2" fill="none" />
-                {state2.length >= 2 && drawArrowHead(state2[state2.length - 2], state2[state2.length - 1], 'red')}
-                <Path d={toPath(state2s)} stroke="grey" strokeWidth="2" fill="none" strokeDasharray="4,4" />
-                {state2s.length >= 2 && drawArrowHead(state2s[state2s.length - 2], state2s[state2s.length - 1], 'grey')}
-                <Path d={toPath(state3)} stroke="green" strokeWidth="2" fill="none" />
-                {state3.length >= 2 && drawArrowHead(state3[state3.length - 2], state3[state3.length - 1], 'green')}
-                <Path d={toPath(state4)} stroke="purple" strokeWidth="2" fill="none" />
 
-                {shouldDrawLine && (
+                {[...state1].map((point, index) => (
+                  <Circle key={index} cx={point.x} cy={point.y} r={4} fill="lightblue" />
+                ))}
+                {[...state2].map((point, index) => (
+                  <Circle key={index} cx={point.x} cy={point.y} r={4} fill="red" />
+                ))}
+                {[...state2s].map((point, index) => (
+                  <Circle key={index} cx={point.x} cy={point.y} r={4} fill="grey" />
+                ))}
+                {[...state3].map((point, index) => (
+                  <Circle key={index} cx={point.x} cy={point.y} r={4} fill="green" />
+                ))}
+                {[...state4].map((point, index) => (
+                  <Circle key={index} cx={point.x} cy={point.y} r={4} fill="purple" />
+                ))}
+                {/* <Path d={toPath(state1)} stroke="lightblue" strokeWidth="2" fill="none" /> */}
+                {/* {state1.length >= 2 && drawArrowHead(state1[state1.length - 2], state1[state1.length - 1], 'lightblue')} */}
+                {/* <Path d={toPath(state2)} stroke="red" strokeWidth="2" fill="none" /> */}
+                {/* {state2.length >= 2 && drawArrowHead(state2[state2.length - 2], state2[state2.length - 1], 'red')} */}
+                {/* <Path d={toPath(state2s)} stroke="grey" strokeWidth="2" fill="none" strokeDasharray="4,4" /> */}
+                {/* {state2s.length >= 2 && drawArrowHead(state2s[state2s.length - 2], state2s[state2s.length - 1], 'grey')} */}
+                {/* <Path d={toPath(state3)} stroke="green" strokeWidth="2" fill="none" /> */}
+                {/* {state3.length >= 2 && drawArrowHead(state3[state3.length - 2], state3[state3.length - 1], 'green')} */}
+                {/* <Path d={toPath(state4)} stroke="purple" strokeWidth="2" fill="none" /> */}
+
+                {/* {shouldDrawLine && (
                   <Line
                     x1={state1[0].x}
                     y1={state1[0].y}
@@ -224,7 +240,7 @@ const TSGraphSVG = ({ xValuesState1, yValuesState1, xValuesState2, yValuesState2
                     strokeWidth="0.5"
                     strokeDasharray="4 4"
                   />
-                )}
+                )} */}
 
 
 
@@ -237,28 +253,28 @@ const TSGraphSVG = ({ xValuesState1, yValuesState1, xValuesState2, yValuesState2
                 ))}
                 {state2.map((point, index) => (
                   index === 0 && (
-                    <SvgText key={`state2-label-${index}`} x={point.x} y={point.y - 5} fontSize="12" fill="grey" textAnchor="middle">
+                    <SvgText key={`state2-label-${index}`} x={point.x + 10} y={point.y + 15} fontSize="12" fill="grey" textAnchor="middle">
                       {labelType === 'label' ? point.label : point.temp}
                     </SvgText>
                   )
                 ))}
                 {state2s.map((point, index) => (
                   index === 0 && (
-                    <SvgText key={`state2s-label-${index}`} x={point.x - 5} y={point.y - 5} fontSize="12" fill="grey" textAnchor="middle">
+                    <SvgText key={`state2s-label-${index}`} x={point.x + 15} y={point.y - 5} fontSize="12" fill="grey" textAnchor="middle">
                       {labelType === 'label' ? point.label : point.temp}
                     </SvgText>
                   )
                 ))}
                 {state3.map((point, index) => (
                   index === 0 && (
-                    <SvgText key={`state3-label-${index}`} x={point.x - 15} y={point.y - 5} fontSize="12" fill="grey" textAnchor="middle">
+                    <SvgText key={`state3-label-${index}`} x={point.x - 25} y={point.y - 5} fontSize="12" fill="grey" textAnchor="middle">
                       {labelType === 'label' ? point.label : point.temp}
                     </SvgText>
                   )
                 ))}
                 {state4.map((point, index) => (
                   index === 0 && (
-                    <SvgText key={`state4-label-${index}`} x={point.x - 15} y={point.y} fontSize="12" fill="grey" textAnchor="middle">
+                    <SvgText key={`state4-label-${index}`} x={point.x - 25} y={point.y} fontSize="12" fill="grey" textAnchor="middle">
                       {labelType === 'label' ? point.label : point.temp}
                     </SvgText>
                   )
@@ -359,7 +375,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 0,
-    gap: 20, // Optional: space between the items
+    gap: 20,
   },
 
   legendItem: {

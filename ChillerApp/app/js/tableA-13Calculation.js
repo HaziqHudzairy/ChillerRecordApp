@@ -2,23 +2,23 @@ import tableData from '../json/table_A13.json';
 
 export default tableData;
 
-export function calcEvap(inputPressure, actualTemp){
+export function calcEvap(inputPressure, actualTemp) {
 
     const evapResult = findPressureBounds(inputPressure, actualTemp);
     const result = isActualTempHigherThanTSat(inputPressure, actualTemp);
     //console.log(result); 
     if (evapResult) {
-        evapResult.isSubcooled = result; // ✅ Add flag directly
+        evapResult.isSubcooled = result;
     }
     return evapResult;
 }
 
-export function calcComp(inputPressure, actualTemp){
+export function calcComp(inputPressure, actualTemp) {
     const compResult = findPressureBounds(inputPressure, actualTemp);
     const result = isActualTempHigherThanTSat(inputPressure, actualTemp);
     //console.log(result);
     if (compResult) {
-        compResult.isSubcooled = result; // ✅ Add flag directly
+        compResult.isSubcooled = result;
     }
     // console.log("compResult", compResult);
     return compResult;
@@ -93,7 +93,7 @@ function findPressureBounds(inputPressure, actualTemp) {
         return {
             h_final: 0,
             s_final: 0,
-            
+
         };
     }
 
@@ -133,7 +133,7 @@ function findPressureBounds2s(inputPressure, evapS) {
 
     for (let i = 0; i < pressures.length - 1; i++) {
         if (pressures[i] <= inputPressure && inputPressure <= pressures[i + 1]) {
-            
+
             lowerP = pressures[i];
             upperP = pressures[i + 1];
             lowerIndex = i;
@@ -272,8 +272,8 @@ function interpolateHS(Pnormalized, tempBounds) {
 }
 
 function interpolateHS2(Pnormalized, tempBounds) {
-    
-    
+
+
     if (!tempBounds) {
         console.error("Error: Temperature bounds data is missing.");
         return null;
@@ -285,7 +285,7 @@ function interpolateHS2(Pnormalized, tempBounds) {
     const h_Tlower = h_s_LP_lower.h + Pnormalized * (h_s_UP_lower.h - h_s_LP_lower.h);
     const s_Tlower = h_s_LP_lower.s + Pnormalized * (h_s_UP_lower.s - h_s_LP_lower.s);
 
-    
+
 
     const h_Tupper = h_s_LP_upper.h + Pnormalized * (h_s_UP_upper.h - h_s_LP_upper.h);
     const s_Tupper = h_s_LP_upper.s + Pnormalized * (h_s_UP_upper.s - h_s_LP_upper.s);

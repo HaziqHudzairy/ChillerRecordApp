@@ -1,4 +1,4 @@
-import * as SQLite from 'expo-sqlite'; 
+import * as SQLite from 'expo-sqlite';
 const db = SQLite.openDatabaseAsync('chiller.db');
 import { getDBConnection, setupDatabase } from './database.js';
 
@@ -71,7 +71,7 @@ export const deleteChillerRecord = async (record_id) => {
 export const insertSampleData = async () => {
   try {
     const db = getDBConnection();
-    
+
     // Insert sample data
     await db.execAsync(`
       
@@ -83,12 +83,12 @@ export const insertSampleData = async () => {
       ('2025-03-28', '4:00 PM', '4:44 PM', 7.2, 1.6, 17.2, 3.0, 27.8, 4.3, 5.2, 0, 0);
       
     `);
-    
+
     console.log("Sample data inserted successfully.");
 
     // Fetch the inserted data
     const results = await db.getAllAsync(`SELECT * FROM chiller_records`);
-    
+
   } catch (error) {
     console.error("Error inserting sample data:", error);
   }
